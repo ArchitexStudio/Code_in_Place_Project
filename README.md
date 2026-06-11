@@ -95,11 +95,22 @@ Stats from [nflreadpy](https://nflreadpy.nflverse.com/) / nflverse (1999–2025)
 The **Deploy GitHub Pages** workflow:
 
 1. Caches pip and nflverse downloads for faster rebuilds
-2. Runs `python scripts/build_nfl_data.py` (1999–2025)
+2. Runs `python scripts/build_nfl_data.py` (1999–2025) — outputs `nfl_data.json` and compressed `nfl_data.json.gz`
 3. Uploads the `docs/` folder as a Pages artifact
 4. Deploys to the `github-pages` environment
 
 Trigger manually from **Actions → Deploy GitHub Pages → Run workflow**, or push to `main`.
+
+## Performance (multi-user)
+
+GitHub Pages serves static files from a CDN — each player runs the game in their own browser with no shared server load. Optimizations:
+
+- **~294 KB compressed data** (`nfl_data.json.gz`) instead of ~1.9 MB raw JSON on first load
+- **Browser Cache API** stores parsed rosters locally for instant return visits
+- **Indexed lookups** for team/position draft queries (no full-array scans during picks)
+- **Preloaded fonts and scripts** for faster first paint
+
+Live game: **https://architexstudio.github.io/Code_in_Place_Project/**
 
 ## Code in Place Submission
 

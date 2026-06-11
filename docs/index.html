@@ -3,9 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1.0">
+<meta name="description" content="Build your perfect 17-0 NFL season with real stats from 1999–2025.">
 <title>17-0: Build Your Perfect Football Season</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" href="app.js" as="script">
+<link rel="preload" href="nfl_data.json.gz" as="fetch" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap');
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--g:#e8e8e8;--g2:#ffffff;--dk:#000000;--cd:#141414;--c2:#222222;--wn:#ffffff;--ls:#777777;--t1:#f5f5f5;--t2:#999999;--gr:#0d0d0d}
 body{font-family:'Oswald',sans-serif;background:var(--dk);color:var(--t1);min-height:100vh;overflow-x:hidden}
@@ -370,7 +375,7 @@ p,span,div,button,.sch-desc,.idesc,.cs,.cum,.field-note,.field-legend,.def-card-
 
 <div class="cfx" id="cfx"></div>
 <div class="toast" id="toast"><div class="tnl">DRAFTED!</div><div class="tnn" id="tnm"></div><div style="font-size:24px;margin-top:5px">⭐</div></div>
-<div id="loading" style="position:fixed;inset:0;background:#f7f5ef;display:flex;align-items:center;justify-content:center;font-family:sans-serif;color:#111;z-index:9999">Loading NFL data...</div>
-<script src="app.js"></script>
+<div id="loading" style="position:fixed;inset:0;background:#f7f5ef;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font-family:sans-serif;color:#111;z-index:9999"><div id="loading-msg">Loading NFL data…</div><div id="loading-sub" style="font-size:12px;color:#666">Preparing 1999–2025 rosters</div></div>
+<script src="app.js" defer></script>
 </body>
 </html>

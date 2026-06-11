@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import gzip
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -197,14 +199,19 @@ def main() -> None:
 
     data = build_data(seasons)
     args.output.parent.mkdir(parents=True, exist_ok=True)
-    with args.output.open("w", encoding="utf-8") as handle:
-        json.dump(data, handle, separators=(",", ":"))
+    payload = json.dumps(data, separators=(",", ":"))
+    data["meta"]["cache_key"] = hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+    payload = json.dumps(data, separators=(",", ":"))
+    args.output.write_text(payload, encoding="utf-8")
+    gzip_path = args.output.with_suffix(".json.gz")
+    gzip_path.write_bytes(gzip.compress(payload.encode("utf-8"), compresslevel=9))
 
     print(
-        f"Wrote {args.output} "
-        f"({len(data['players'])} players, "
+        f"Wrote {args.output} ({len(payload)} bytes) "
+        f"and {gzip_path} ({gzip_path.stat().st_size} bytes) "
+        f"— {len(data['players'])} players, "
         f"{len(data['ol_units'])} OL units, "
-        f"{len(data['defense_units'])} defenses)"
+        f"{len(data['defense_units'])} defenses"
     )
 
 

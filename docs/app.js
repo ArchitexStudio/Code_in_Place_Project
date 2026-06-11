@@ -1,4 +1,6 @@
 var PL=[], OLU=[], DEFU=[], TMS=[], UNIT_YEARS=[], ERAS=["1999–2009","2010s","2020s"];
+var IDX={byPosTeam:{},teamsByPos:{},olByYear:{},defByYear:{}};
+var DATA_CACHE='nfl-170-cache-v1';
 
 /* Uniform random selection + Elo win probability (all spins use valid-pool math). */
 function randFloat(){return Math.random();}
@@ -15,6 +17,71 @@ function winProbability(mine,opp){
   return Math.max(0.10,Math.min(0.93,1/(1+Math.pow(10,(opp-mine)/15))));
 }
 
+function buildIndices(){
+  IDX.byPosTeam={};IDX.teamsByPos={};IDX.olByYear={};IDX.defByYear={};
+  PL.forEach(function(p){
+    var pos=p[2], team=canonicalTeam(p[3]);
+    if(!IDX.byPosTeam[pos])IDX.byPosTeam[pos]={};
+    if(!IDX.byPosTeam[pos][team])IDX.byPosTeam[pos][team]=[];
+    IDX.byPosTeam[pos][team].push(p);
+    if(!IDX.teamsByPos[pos])IDX.teamsByPos[pos]={};
+    IDX.teamsByPos[pos][team]=true;
+  });
+  OLU.forEach(function(u){
+    var y=u[3];if(!IDX.olByYear[y])IDX.olByYear[y]=[];IDX.olByYear[y].push(u);
+  });
+  DEFU.forEach(function(d){
+    var y=d[3];if(!IDX.defByYear[y])IDX.defByYear[y]=[];IDX.defByYear[y].push(d);
+  });
+}
+function setLoading(msg,sub){
+  var m=document.getElementById('loading-msg'), s=document.getElementById('loading-sub');
+  if(m&&msg)m.textContent=msg;
+  if(s&&sub)s.textContent=sub;
+}
+function parseDataPayload(text){return JSON.parse(text);}
+async function loadGameData(){
+  var cachedKey=null;
+  try{cachedKey=localStorage.getItem(DATA_CACHE+'-key');}catch(e){}
+  if(cachedKey&&'caches' in window){
+    try{
+      var cache=await caches.open(DATA_CACHE);
+      var hit=await cache.match('/nfl-data/'+cachedKey);
+      if(hit){
+        setLoading('Loading NFL data…','Using cached rosters');
+        return parseDataPayload(await hit.text());
+      }
+    }catch(e){}
+  }
+  var sources=[{url:'nfl_data.json.gz',gzip:true,label:'compressed roster file'},{url:'nfl_data.json',gzip:false,label:'roster file'}];
+  var lastErr=null;
+  for(var i=0;i<sources.length;i++){
+    try{
+      setLoading('Loading NFL data…','Fetching '+sources[i].label);
+      var res=await fetch(sources[i].url,{cache:'default'});
+      if(!res.ok)throw new Error('HTTP '+res.status);
+      var data;
+      if(sources[i].gzip&&typeof DecompressionStream!=='undefined'){
+        setLoading('Loading NFL data…','Decompressing rosters');
+        var ds=new DecompressionStream('gzip');
+        var stream=res.body.pipeThrough(ds);
+        data=parseDataPayload(await new Response(stream).text());
+      }else{
+        data=parseDataPayload(await res.text());
+      }
+      var key=(data.meta&&data.meta.cache_key)||String((data.players||[]).length);
+      try{
+        localStorage.setItem(DATA_CACHE+'-key',key);
+        if('caches' in window){
+          var cache=await caches.open(DATA_CACHE);
+          await cache.put('/nfl-data/'+key,new Response(JSON.stringify(data),{headers:{'Content-Type':'application/json'}}));
+        }
+      }catch(e){}
+      return data;
+    }catch(err){lastErr=err;}
+  }
+  throw lastErr||new Error('Unable to load NFL data');
+}
 var FRANCHISE_ALIAS={
   "St. Louis Rams":"Los Angeles Rams","STL Rams":"Los Angeles Rams",
   "San Diego Chargers":"Los Angeles Chargers","SD Chargers":"Los Angeles Chargers",
@@ -179,24 +246,19 @@ function spinReel(el,valEl,pool,onDone,ticks,forcedResult){
   },80);
 }
 function eligibleTeams(){
-  var pos=G.DO[G.idx].p, seen={}, teams=[];
-  PL.forEach(function(pl){
-    if(pl[2]!==pos||G.used.has(pl[0]))return;
-    var team=canonicalTeam(pl[3]);
-    if(!seen[team]){seen[team]=true;teams.push(team);}
+  var pos=G.DO[G.idx].p, teams=[], seen=IDX.teamsByPos[pos]||{};
+  Object.keys(seen).forEach(function(team){
+    var list=IDX.byPosTeam[pos]&&IDX.byPosTeam[pos][team];
+    if(list&&list.some(function(pl){return !G.used.has(pl[0]);}))teams.push(team);
   });
   return teams.sort();
 }
 function eligibleYears(){
   var pos=G.DO[G.idx].p, years=[];
-  if(pos==='OL'){
-    UNIT_YEARS.forEach(function(y){if(OLU.some(function(u){return u[3]===y;}))years.push(y);});
-  }else if(pos==='DEF'){
-    UNIT_YEARS.forEach(function(y){if(DEFU.some(function(d){return d[3]===y;}))years.push(y);});
-  }else{
-    years=UNIT_YEARS.slice();
-  }
-  return years;
+  if(pos==='OL')years=Object.keys(IDX.olByYear).map(Number);
+  else if(pos==='DEF')years=Object.keys(IDX.defByYear).map(Number);
+  else years=UNIT_YEARS.slice();
+  return years.sort(function(a,b){return a-b;});
 }
 function eligibleCombos(){
   var pos=G.DO[G.idx].p, seen={}, combos=[];
@@ -288,14 +350,13 @@ function showOpts(team,year){
     var el=document.getElementById('opts');el.style.display='grid';el.className='cards cards-scroll';
     if(pos==='OL'){showUnits(team,eraFromYear(team));return;}
     if(pos==='DEF'){showDefUnits(team,eraFromYear(team));return;}
-    var teamPick=isTeamPick(), pool=[];
-    for(var i=0;i<PL.length;i++){
-      if(PL[i][2]!==pos||G.used.has(PL[i][0]))continue;
-      if(teamPick){
-        if(playerOnTeam(PL[i],team))pool.push(PL[i]);
-      }else if(playerOnTeamYear(PL[i],team,year)){
-        pool.push(PL[i]);
-      }
+    var teamPick=isTeamPick(), pool=[], teamKey=canonicalTeam(team);
+    var source=IDX.byPosTeam[pos]&&IDX.byPosTeam[pos][teamKey]?IDX.byPosTeam[pos][teamKey]:[];
+    for(var i=0;i<source.length;i++){
+      var pl=source[i];
+      if(G.used.has(pl[0]))continue;
+      if(teamPick)pool.push(pl);
+      else if(playerOnTeamYear(pl,team,year))pool.push(pl);
     }
     pool.sort(function(a,b){
       var ya=primaryYear(a)||0, yb=primaryYear(b)||0;
@@ -328,7 +389,7 @@ function showUnits(year,era){
   try{
     var el=document.getElementById('opts');el.style.display='grid';el.className='cards';el.innerHTML='';
     year=parseInt(year,10);if(!year){year=2024;}era=eraFromYear(year);G.spinEra=era;
-    var yearPool=OLU.filter(function(u){return u[3]===year;}).sort(function(a,b){return b[4]-a[4];}).slice(0,3);
+    var yearPool=(IDX.olByYear[year]||[]).slice().sort(function(a,b){return b[4]-a[4];}).slice(0,3);
     el.innerHTML+='<div class="def-note"><strong>O-Line rule:</strong> Pick one full offensive-line team unit. No individual linemen. The board shows only the top 3 seeded OL units for the selected year. Range: <strong>1999–2025</strong>.</div>';
     if(yearPool.length){
       el.innerHTML+='<div class="def-section-title">Top 3 Offensive-Line Units · '+year+' Regular Season</div>';
@@ -356,7 +417,7 @@ function showDefUnits(year,era){
     year=parseInt(year,10);if(!year){year=2024;}era=eraFromYear(year);G.spinEra=era;
     var schemeLabel=G.scheme==='43'?'4-3':'3-4';
     // #1 seed = the year's top-ranked defense (sorted by rating desc = real rank order)
-    var yearPool=DEFU.filter(function(d){return d[3]===year;}).sort(function(a,b){return b[4]-a[4];}).slice(0,3);
+    var yearPool=(IDX.defByYear[year]||[]).slice().sort(function(a,b){return b[4]-a[4];}).slice(0,3);
     el.innerHTML+='<div class="def-note"><strong>Defense rule:</strong> Pick one full defensive team unit — not individual players. The <strong>#1 seed is that year’s top-ranked defense</strong> (total + scoring defense). The board shows only that year’s top 3. Cards show team-defense stats — not W/L. Chosen scheme: <strong>'+schemeLabel+'</strong>. Range: <strong>1999–2025</strong>.</div>';
     if(yearPool.length){
       el.innerHTML+='<div class="def-section-title">Top 3 Defensive Units · '+year+' Regular Season</div>';
@@ -631,21 +692,22 @@ function initGameData(data){
   TMS=data.teams||[];
   UNIT_YEARS=data.unit_years||[];
   normalizeFranchiseData();
+  buildIndices();
   var loading=document.getElementById('loading');
   if(loading)loading.style.display='none';
   var startBtn=document.getElementById('startBtn');
   if(startBtn)startBtn.disabled=false;
 }
 
-fetch('nfl_data.json')
-  .then(function(res){
-    if(!res.ok)throw new Error('HTTP '+res.status);
-    return res.json();
-  })
+loadGameData()
   .then(initGameData)
   .catch(function(err){
     var loading=document.getElementById('loading');
-    if(loading)loading.textContent='Failed to load NFL data: '+err.message+'. Run scripts/build_nfl_data.py first.';
+    if(loading){
+      setLoading('Failed to load NFL data','Please refresh and try again');
+      var sub=document.getElementById('loading-sub');
+      if(sub)sub.textContent=err.message;
+    }
     console.error(err);
   });
 
