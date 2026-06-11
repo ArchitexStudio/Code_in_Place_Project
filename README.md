@@ -90,6 +90,19 @@ Stats from [nflreadpy](https://nflreadpy.nflverse.com/) / nflverse (1999–2025)
 - Top 3 O-line units and top 3 defenses per year
 - Defensive scheme inferred from play-by-play personnel
 
+### Best players by team (1999–2025)
+
+Full team-specific leaderboards for **QB, RB, WR, and TE** — one combined stat line per player per team, starters only:
+
+- Markdown: [`docs/best_players_by_team.md`](docs/best_players_by_team.md)
+- JSON: [`docs/best_players_by_team.json`](docs/best_players_by_team.json)
+
+Regenerate locally:
+
+```bash
+python scripts/build_best_players.py
+```
+
 ## Deployment (GitHub Actions)
 
 The **Deploy GitHub Pages** workflow:
