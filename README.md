@@ -12,7 +12,7 @@ Build a dream NFL roster from real stats, draft offense and defense, and play fo
 
 ### Enable GitHub Pages (one-time)
 
-1. Push this repo to GitHub (`main` branch)
+1. The repository must be **public** (required for free GitHub Pages hosting)
 2. Go to **Settings → Pages → Build and deployment**
 3. Set **Source** to **GitHub Actions** (not “Deploy from a branch”)
 4. Every push to `main` runs `.github/workflows/pages.yml`, rebuilds NFL data, and deploys `docs/`
