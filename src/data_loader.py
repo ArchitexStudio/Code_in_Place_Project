@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from functools import lru_cache
+from pathlib import Path
 
 import polars as pl
 
@@ -20,10 +21,12 @@ def configure_nflreadpy() -> None:
 
     from nflreadpy.config import update_config
 
-    CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    # nflreadpy calls cache_dir.mkdir(); setattr bypasses pydantic Path coercion.
+    cache_dir = Path(CACHE_DIR)
+    cache_dir.mkdir(parents=True, exist_ok=True)
     update_config(
         cache_mode="filesystem",
-        cache_dir=CACHE_DIR,
+        cache_dir=cache_dir,
         cache_duration=86400,
         verbose=False,
         timeout=60,
