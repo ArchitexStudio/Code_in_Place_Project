@@ -2,7 +2,7 @@ name: Deploy GitHub Pages
 
 on:
   push:
-    branches: [main, Code_in_Place_Final_2025]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -12,7 +12,7 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
@@ -61,6 +61,9 @@ jobs:
           rm -f docs/index.html.bak
           echo "Deployed build stamp: ${SHA}"
           grep -o "app.js?v=[^\"']*" docs/index.html | head -1
+          grep -q "draft-body" docs/index.html
+          grep -q "browser-toolbar-top" docs/index.html
+          grep -q "spin-card" docs/index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
