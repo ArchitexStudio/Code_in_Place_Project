@@ -45,6 +45,9 @@ jobs:
       - name: Build NFL data JSON
         run: python scripts/build_nfl_data.py
 
+      - name: Run tests
+        run: PYTHONPATH=. pytest tests/ -v
+
       - name: Build best players by team report
         run: python scripts/build_best_players.py
 

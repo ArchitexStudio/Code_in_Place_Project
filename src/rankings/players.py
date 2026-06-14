@@ -67,6 +67,8 @@ def aggregate_team_season_players(season: int) -> pl.DataFrame:
     Traded players appear once per team they played for that season.
     """
     weekly = load_player_weekly_stats(season)
+    if "season_type" in weekly.columns:
+        weekly = weekly.filter(pl.col("season_type") == "REG")
     team_col = team_column(weekly)
     name_col = player_name_column(weekly)
     sum_cols = available_sum_columns(weekly)

@@ -1,4 +1,4 @@
-var PL=[], OLU=[], DEFU=[], TMS=[], UNIT_YEARS=[], ERAS=["1999–2009","2010s","2020s"];
+var PL=[], OLU=[], DEFU=[], TMS=[], UNIT_YEARS=[], DIVISIONS=[], ERAS=["1999–2009","2010s","2020s"];
 var IDX={byPosTeam:{},teamsByPos:{},olByYear:{},defByYear:{}};
 var DATA_CACHE='nfl-170-cache-v1';
 
@@ -197,9 +197,11 @@ function startDraft(){
 
 function refreshDraft(){
   var pick=G.DO[G.idx];
-  document.getElementById('pkl').textContent='PICK '+(G.idx+1)+' OF '+G.DO.length;
+  document.getElementById('pkl').textContent='PICK '+(G.idx+1)+' / '+G.DO.length;
   document.getElementById('pnl').textContent=pick.l;
-  var t=calcTR();document.getElementById('trl').textContent=t>0?t:'—';
+  var sub=document.getElementById('pick-sub');
+  if(sub)sub.textContent=G.stage==='offense'?'Offense draft · team spin per position':'Defense draft · year spin · top 3 units';
+  var t=calcTR();document.getElementById('trl').textContent=t>0?'OVR '+t:'—';
   var pl=document.getElementById('phase-lbl');
   pl.className='dphase '+pick.ph;
   pl.textContent=pick.ph==='off'?'OFFENSE':(G.scheme==='43'?'4-3 TEAM DEFENSE':'3-4 TEAM DEFENSE');
@@ -218,9 +220,10 @@ function refreshDraft(){
   document.getElementById('rrteam').style.display='';
   document.getElementById('rrteam').textContent=teamPick?'↩ New Team':'↩ New Year';
   document.getElementById('rrera').style.display=(mode||teamPick)?'none':'';
-  document.getElementById('rrera').textContent='↩ New Team';
-  document.getElementById('spbtn').textContent=mode?'🎰 SPIN YEAR':(teamPick?'🎰 SPIN TEAM':'🎰 SPIN');
-  document.querySelector('.spinlbl').textContent=isDef?'SPIN YEAR · EQUAL CHANCE PER SEASON · TOP 3 DEFENSES FOR THAT YEAR':(isOL?'SPIN YEAR · EQUAL CHANCE PER SEASON · TOP 3 OL UNITS FOR THAT YEAR':(teamPick?'SPIN TEAM · EQUAL CHANCE PER FRANCHISE · ALL '+pick.p+' SEASONS 1999–2025':'SPIN YEAR + TEAM · EQUAL CHANCE PER VALID COMBO'));
+  document.getElementById('rrera').textContent='↩ New Year';
+  document.getElementById('spbtn').textContent=mode?'SPIN YEAR':(teamPick?'SPIN TEAM':'SPIN');
+  var spinLbl=document.getElementById('spin-lbl')||document.querySelector('.spinlbl');
+  if(spinLbl)spinLbl.textContent=isDef?'Spin year · equal odds · top 3 defenses for that season':(isOL?'Spin year · equal odds · top 3 OL units for that season':(teamPick?'Spin a franchise · equal odds · all '+pick.p+' seasons 1999–2025':'Spin year + team · equal odds per valid combo'));
   document.getElementById('rvt').textContent='???';document.getElementById('rvd').textContent='???';
   ['rvt','rvd'].forEach(function(id){document.getElementById(id).classList.remove('bl');});
   ['rte','rde'].forEach(function(id){document.getElementById(id).classList.remove('sp');});
@@ -417,7 +420,11 @@ function showDefUnits(year,era){
     year=parseInt(year,10);if(!year){year=2024;}era=eraFromYear(year);G.spinEra=era;
     var schemeLabel=G.scheme==='43'?'4-3':'3-4';
     // #1 seed = the year's top-ranked defense (sorted by rating desc = real rank order)
-    var yearPool=(IDX.defByYear[year]||[]).slice().sort(function(a,b){return b[4]-a[4];}).slice(0,3);
+    var yearPool=(IDX.defByYear[year]||[]).slice().sort(function(a,b){
+      var aFit=a[5]===G.scheme?1:0, bFit=b[5]===G.scheme?1:0;
+      if(bFit!==aFit)return bFit-aFit;
+      return b[4]-a[4];
+    }).slice(0,3);
     el.innerHTML+='<div class="def-note"><strong>Defense rule:</strong> Pick one full defensive team unit — not individual players. The <strong>#1 seed is that year’s top-ranked defense</strong> (total + scoring defense). The board shows only that year’s top 3. Cards show team-defense stats — not W/L. Chosen scheme: <strong>'+schemeLabel+'</strong>. Range: <strong>1999–2025</strong>.</div>';
     if(yearPool.length){
       el.innerHTML+='<div class="def-section-title">Top 3 Defensive Units · '+year+' Regular Season</div>';
@@ -431,8 +438,8 @@ function showDefUnits(year,era){
         (function(d,idx){
           var c=document.createElement('div');c.className='card def-unit-card';
           var fit=d[5]===G.scheme?'Scheme fit':'Scheme convert';
-          var m=defMetrics(d,bucket,idx);
-          c.innerHTML='<div class="cp">'+(bucket==='Y'?'YEAR TOP 3':'ERA TOP 10')+' · '+esc(d[5]==='43'?'4-3':'3-4')+'</div><div class="def-unit-rank">'+(bucket==='Y'?'#'+(idx+1):d[4])+'</div><div class="cn">'+esc(canonicalUnitName(d[0]))+'</div><div class="ct">'+esc(canonicalTeam(d[1]))+' · '+d[3]+'</div><div class="ce">'+esc(eraLabel(d[2]))+' · REGULAR-SEASON DEFENSE UNIT</div>'+defStatsHtml(m)+'<div class="def-card-note">'+esc(cleanRSStat(d[6]))+'</div><span class="def-tag">'+fit+'</span><span class="def-tag">Full team defense</span>';
+          var m=defMetricsFromData(d,idx);
+          c.innerHTML='<div class="cp">YEAR TOP 3 · '+esc(d[5]==='43'?'4-3':'3-4')+'</div><div class="def-unit-rank">#'+(idx+1)+'</div><div class="cn">'+esc(canonicalUnitName(d[0]))+'</div><div class="ct">'+esc(canonicalTeam(d[1]))+' · '+d[3]+'</div><div class="ce">'+esc(eraLabel(d[2]))+' · REGULAR-SEASON DEFENSE</div>'+defStatsHtml(m)+'<div class="def-card-note">'+esc(cleanRSStat(d[6]))+'</div><span class="def-tag">'+fit+'</span><span class="def-tag">nflverse REG stats</span>';
           c.onclick=function(){pickD(d,m);};
           el.appendChild(c);
         })(list[i],i);
@@ -441,6 +448,18 @@ function showDefUnits(year,era){
   }catch(e){console.warn(e);}
 }
 
+function defMetricsFromData(d,idx){
+  if(d.length>=10&&d[7]!=null){
+    return {
+      totalRank:idx+1,
+      pointsAllowed:parseInt(d[7],10)||0,
+      yardsAllowed:parseInt(d[8],10)||0,
+      takeaways:parseInt(d[9],10)||0,
+      fromData:true
+    };
+  }
+  return defMetrics(d,'Y',idx);
+}
 function defMetrics(d,bucket,idx){
   // Display model for defensive units (no W/L). #1 year seed = best total/scoring D.
   var rating=parseInt(d[4]||90,10), year=parseInt(d[3]||2024,10), slot=parseInt(idx||0,10);
@@ -453,6 +472,14 @@ function defMetrics(d,bucket,idx){
   return {totalRank:totalRank,scoringRank:scoringRank,sacks:sacks,ints:ints,defTd:defTd,takeaways:takeaways};
 }
 function defStatsHtml(m){
+  if(m.fromData){
+    return '<div class="def-stat-grid">'+
+      '<div class="def-stat"><div class="def-stat-label">Year Rank</div><div class="def-stat-value">#'+m.totalRank+'</div></div>'+
+      '<div class="def-stat"><div class="def-stat-label">Pts Allowed</div><div class="def-stat-value">'+m.pointsAllowed+'</div></div>'+
+      '<div class="def-stat"><div class="def-stat-label">Yds Allowed</div><div class="def-stat-value">'+m.yardsAllowed+'</div></div>'+
+      '<div class="def-stat"><div class="def-stat-label">Takeaways</div><div class="def-stat-value">'+m.takeaways+'</div></div>'+
+    '</div>';
+  }
   return '<div class="def-stat-grid">'+
     '<div class="def-stat"><div class="def-stat-label">Total DEF</div><div class="def-stat-value">#'+m.totalRank+'</div></div>'+ 
     '<div class="def-stat"><div class="def-stat-label">Scoring DEF</div><div class="def-stat-value">#'+m.scoringRank+'</div></div>'+ 
@@ -463,7 +490,8 @@ function defStatsHtml(m){
   '</div>';
 }
 function defStatsLine(m){
-  return 'Total DEF #'+m.totalRank+' · Scoring DEF #'+m.scoringRank+' · Sacks '+m.sacks+' · INT '+m.ints+' · DEF TD '+m.defTd+' · Takeaways '+m.takeaways;
+  if(m.fromData)return 'Pts '+m.pointsAllowed+' · Yds '+m.yardsAllowed+' · TO '+m.takeaways+' · Rank #'+m.totalRank;
+  return 'Total DEF #'+m.totalRank+' · Sacks '+m.sacks+' · INT '+m.ints+' · Takeaways '+m.takeaways;
 }
 
 function pickP(pl,year){
@@ -483,7 +511,7 @@ function pickU(u){
 }
 function pickD(d,m){
   try{
-    G.roster.DEF={n:canonicalUnitName(d[0]),t:canonicalTeam(d[1]),e:eraLabel(d[2]),y:d[3],r:d[4],scheme:d[5],s:cleanRSStat(d[6]),stats:m||defMetrics(d,'Y',0),isD:true};
+    G.roster.DEF={n:canonicalUnitName(d[0]),t:canonicalTeam(d[1]),e:eraLabel(d[2]),y:d[3],r:d[4],scheme:d[5],s:cleanRSStat(d[6]),stats:m||defMetricsFromData(d,0),isD:true};
     showToast(d[0]);setTimeout(adv,1100);
   }catch(e){console.warn(e);}
 }
@@ -525,7 +553,7 @@ function fieldName(p){
 }
 function slotMeta(p){
   if(!p)return '';
-  if(p.isD&&p.stats)return esc('Total DEF #'+p.stats.totalRank+' · Sacks '+p.stats.sacks+' · INT '+p.stats.ints);
+  if(p.isD&&p.stats)return esc(defStatsLine(p.stats));
   return esc((p.t||'').split(' ').slice(-2).join(' ')+' · '+(p.y||p.e));
 }
 function posNode(sl,x,y,type,cur){
@@ -685,14 +713,56 @@ function confetti(){
 }
 
 
+function renderFranchiseGrid(){
+  var root=document.getElementById('franchise-grid');
+  if(!root||!DIVISIONS.length)return;
+  root.innerHTML='';
+  var lastConf='';
+  DIVISIONS.forEach(function(div){
+    if(div.conf!==lastConf){
+      lastConf=div.conf;
+      var confEl=document.createElement('div');
+      confEl.className='franchise-conf';
+      confEl.textContent=div.conf;
+      root.appendChild(confEl);
+    }
+    var block=document.createElement('div');
+    block.innerHTML='<div class="franchise-div">'+esc(div.label)+'</div>';
+    var tiles=document.createElement('div');
+    tiles.className='franchise-tiles';
+    div.teams.forEach(function(team){
+      var tile=document.createElement('button');
+      tile.type='button';
+      tile.className='franchise-tile';
+      tile.dataset.abbr=team.abbr;
+      tile.dataset.name=team.name;
+      var pct=Math.round((team.difficulty||0.5)*100);
+      tile.innerHTML='<div class="franchise-abbr">'+esc(team.abbr)+'</div><div class="franchise-name">'+esc(team.name)+'</div><div class="franchise-bar" style="background:linear-gradient(90deg,#22c55e 0%,#eab308 '+pct+'%,#ef4444 100%)"></div>';
+      tile.onclick=function(){selectFranchiseTile(tile,team);};
+      tiles.appendChild(tile);
+    });
+    block.appendChild(tiles);
+    root.appendChild(block);
+  });
+}
+function selectFranchiseTile(tile,team){
+  var tiles=document.querySelectorAll('.franchise-tile');
+  for(var i=0;i<tiles.length;i++)tiles[i].classList.remove('sel');
+  tile.classList.add('sel');
+  var blurb=document.getElementById('franchise-blurb');
+  if(blurb)blurb.textContent='Explore '+team.name+' ('+team.abbr+') — all QB/RB/WR/TE seasons from 1999–2025 are in the draft pool when this franchise is spun.';
+}
+
 function initGameData(data){
   PL=data.players||[];
   OLU=data.ol_units||[];
   DEFU=data.defense_units||[];
   TMS=data.teams||[];
   UNIT_YEARS=data.unit_years||[];
+  DIVISIONS=data.divisions||[];
   normalizeFranchiseData();
   buildIndices();
+  renderFranchiseGrid();
   var loading=document.getElementById('loading');
   if(loading)loading.style.display='none';
   var startBtn=document.getElementById('startBtn');

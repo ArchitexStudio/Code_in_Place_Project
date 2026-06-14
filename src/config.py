@@ -13,6 +13,16 @@ TOP_N_DEFENSES = 3
 
 OFFENSE_POSITIONS = ["QB", "RB", "WR", "TE"]
 
+# Canonical franchise abbreviations (relocations / renames).
+FRANCHISE_ABBR = {
+    "STL": "LAR",
+    "OAK": "LV",
+    "SD": "LAC",
+    "LA": "LAR",
+    "JAC": "JAX",
+    "WSH": "WAS",
+}
+
 # Columns summed when aggregating weekly player stats by team.
 PLAYER_SUM_COLUMNS = [
     "completions",
