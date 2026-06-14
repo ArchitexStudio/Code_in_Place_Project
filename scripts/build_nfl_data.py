@@ -130,55 +130,77 @@ def compute_win_rates(seasons: list[int]) -> dict[str, float]:
     return {team: wins[team] / games[team] for team in games if games[team] > 0}
 
 
-def build_players(season: int, team_names: dict[str, str]) -> list[list]:
-    """Build player entries for one season (all rostered players per team-position)."""
-    aggregated = aggregate_team_season_players(season)
-    sum_cols = available_sum_columns(aggregated)
-    entries: list[list] = []
+def build_players_combined(seasons: list[int], team_names: dict[str, str]) -> list[list]:
+    """One entry per player×team with combined REG stats across all stints (1999–2025)."""
+    careers: dict[tuple[str, str, str], dict] = {}
+    sum_cols: list[str] | None = None
 
-    for position in ("QB", "RB", "WR", "TE"):
-        pos_rows = aggregated.filter(aggregated["position"] == position)
-        if pos_rows.is_empty():
-            continue
+    for season in seasons:
+        print(f"  Players {season}...", flush=True)
+        aggregated = aggregate_team_season_players(season)
+        cols = available_sum_columns(aggregated)
+        if sum_cols is None:
+            sum_cols = cols
 
-        scored: list[tuple[float, dict]] = []
-        for row in pos_rows.iter_rows(named=True):
-            stats = {key: float(row.get(key) or 0) for key in sum_cols}
-            score = _score_for_position(position, stats)
-            if score <= 0:
+        for row in aggregated.iter_rows(named=True):
+            position = str(row["position"])
+            if position not in ("QB", "RB", "WR", "TE"):
                 continue
-            scored.append((score, row))
-
-        if not scored:
-            continue
-
-        max_score = max(s for s, _ in scored)
-        by_team: dict[str, list[tuple[float, dict]]] = {}
-        for score, row in scored:
             team = canonical_abbr(str(row["team"]))
-            by_team.setdefault(team, []).append((score, row))
+            pid = str(row["player_id"])
+            key = (pid, team, position)
+            if key not in careers:
+                careers[key] = {
+                    "player_id": pid,
+                    "name": str(row["player_name"]),
+                    "team": team,
+                    "position": position,
+                    "stats": {col: 0.0 for col in cols},
+                    "seasons": set(),
+                }
+            bucket = careers[key]
+            for col in cols:
+                bucket["stats"][col] += float(row.get(col) or 0)
+            bucket["seasons"].add(season)
 
-        for team, team_rows in by_team.items():
-            team_rows.sort(key=lambda item: item[0], reverse=True)
-            for score, row in team_rows:
-                team_full = team_names.get(team, team)
-                player_id = f"{row['player_id']}|{team}|{season}"
-                name = str(row["player_name"])
-                rating = score_to_rating(score, max_score)
-                stat = _format_stat_line(position, {k: float(row.get(k) or 0) for k in sum_cols})
-                stat_line = f"{team} RS only: {stat} ({season} regular season)"
-                entries.append(
-                    [
-                        player_id,
-                        name,
-                        position,
-                        team_full,
-                        era_from_year(season),
-                        rating,
-                        stat_line,
-                        [season],
-                    ]
-                )
+    if not sum_cols:
+        return []
+
+    by_team_pos: dict[tuple[str, str], list[tuple[float, dict]]] = defaultdict(list)
+    for bucket in careers.values():
+        score = _score_for_position(bucket["position"], bucket["stats"])
+        if score <= 0:
+            continue
+        by_team_pos[(bucket["team"], bucket["position"])].append((score, bucket))
+
+    entries: list[list] = []
+    for (team, position), rows in by_team_pos.items():
+        max_score = max(s for s, _ in rows)
+        team_full = team_names.get(team, team)
+        for score, bucket in sorted(rows, key=lambda item: item[0], reverse=True):
+            seasons_sorted = sorted(bucket["seasons"])
+            years_label = (
+                f"{seasons_sorted[0]}–{seasons_sorted[-1]}"
+                if len(seasons_sorted) > 1
+                else str(seasons_sorted[0])
+            )
+            stat = _format_stat_line(position, bucket["stats"])
+            stat_line = (
+                f"{team} RS combined: {stat} ({years_label} regular season"
+                f"{'s' if len(seasons_sorted) > 1 else ''})"
+            )
+            entries.append(
+                [
+                    f"{bucket['player_id']}|{team}",
+                    bucket["name"],
+                    position,
+                    team_full,
+                    era_from_year(seasons_sorted[-1]),
+                    score_to_rating(score, max_score),
+                    stat_line,
+                    seasons_sorted,
+                ]
+            )
 
     return entries
 
@@ -235,13 +257,12 @@ def build_data(seasons: list[int]) -> dict:
     win_rates = compute_win_rates(seasons)
     divisions = build_divisions(team_names, win_rates)
 
-    players: list[list] = []
+    players = build_players_combined(seasons, team_names)
     ol_units: list[list] = []
     defense_units: list[list] = []
 
     for season in seasons:
-        print(f"Building {season}...", flush=True)
-        players.extend(build_players(season, team_names))
+        print(f"Building units {season}...", flush=True)
         ol_units.extend(build_ol_units(season, team_names))
         defense_units.extend(build_def_units(season, team_names))
 
