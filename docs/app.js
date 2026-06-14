@@ -429,9 +429,6 @@ function positionFilterHtml(activePos){
 function mountPlayerBrowser(el,pool,pos,onPick){
   var cols=statColumns(pos), sortKey='ovr';
   var sorted=sortPlayerPool(pool,pos,sortKey);
-  // #region agent log
-  fetch('http://127.0.0.1:7329/ingest/df8bd037-d473-483f-90b0-a95855a8eebe',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1d4e7a'},body:JSON.stringify({sessionId:'1d4e7a',hypothesisId:'A',location:'app.js:mountPlayerBrowser',message:'pool mounted sorted by ovr',data:{pos:pos,count:sorted.length,top5:sorted.slice(0,5).map(function(p){return {name:p[1],ovr:playerOvr(p),type:typeof p[5]};}),isDescending:sorted.length<2||playerOvr(sorted[0])>=playerOvr(sorted[1])},timestamp:Date.now()})}).catch(function(){});
-  // #endregion
   el.style.display='block';
   el.className='player-browser';
   el.innerHTML=
@@ -473,9 +470,6 @@ function mountPlayerBrowser(el,pool,pos,onPick){
     sortSel.onchange=function(){
       sortKey=sortSel.value;
       currentPool=sortPlayerPool(pool,pos,sortKey);
-      // #region agent log
-      fetch('http://127.0.0.1:7329/ingest/df8bd037-d473-483f-90b0-a95855a8eebe',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1d4e7a'},body:JSON.stringify({sessionId:'1d4e7a',hypothesisId:'C',location:'app.js:sortChange',message:'re-sorted pool',data:{sortKey:sortKey,top3:currentPool.slice(0,3).map(function(p){return {name:p[1],val:statSortValue(p,pos,sortKey)};})},timestamp:Date.now()})}).catch(function(){});
-      // #endregion
       bindRows();
     };
   }
@@ -541,9 +535,6 @@ function showOpts(team,year){
       else if(playerOnTeamYear(pl,team,year))pool.push(pl);
     }
     pool.sort(function(a,b){return playerOvr(b)-playerOvr(a);});
-    // #region agent log
-    fetch('http://127.0.0.1:7329/ingest/df8bd037-d473-483f-90b0-a95855a8eebe',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1d4e7a'},body:JSON.stringify({sessionId:'1d4e7a',hypothesisId:'B',location:'app.js:showOpts',message:'pool after sort',data:{pos:pos,team:teamAbbr(teamKey),count:pool.length,top5:pool.slice(0,5).map(function(p){return {name:p[1],ovr:playerOvr(p),raw:p[5]};}),bottom2:pool.slice(-2).map(function(p){return {name:p[1],ovr:playerOvr(p)};})},timestamp:Date.now()})}).catch(function(){});
-    // #endregion
     el.innerHTML='';
     if(!pool.length){
       el.style.display='block';
@@ -892,10 +883,6 @@ function initGameData(data){
   var badge=document.getElementById('build-badge');
   var build=window.__APP_BUILD__||'unknown';
   if(badge)badge.textContent='Build '+build;
-  // #region agent log
-  console.info('[17-0] init', {build:build, players:PL.length, hasBrowserUI:typeof mountPlayerBrowser==='function'});
-  fetch('http://127.0.0.1:7329/ingest/df8bd037-d473-483f-90b0-a95855a8eebe',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1d4e7a'},body:JSON.stringify({sessionId:'1d4e7a',hypothesisId:'H1',location:'app.js:initGameData',message:'app initialized',data:{build:build,players:PL.length,hasBrowserUI:typeof mountPlayerBrowser==='function'},timestamp:Date.now()})}).catch(function(){});
-  // #endregion
 }
 
 loadGameData()
