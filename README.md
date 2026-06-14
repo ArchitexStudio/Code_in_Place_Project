@@ -10,6 +10,18 @@ Build a dream NFL roster from real stats, draft offense and defense, and play fo
 
 **https://architexstudio.github.io/Code_in_Place_Project/**
 
+Works on **any modern browser** in the US (and worldwide): laptop, phone, tablet — Chrome, Safari, Firefox, Edge. No install or account required. The game is static HTML/JS served from GitHub’s CDN.
+
+### Keeping the game online through December 31, 2027
+
+The live link stays up as long as:
+
+1. This repository remains **public** (required for free GitHub Pages)
+2. **Settings → Pages → Build and deployment** stays on **GitHub Actions**
+3. The repo and GitHub account are not deleted
+
+Every push to `main` redeploys automatically. You can also redeploy anytime: **Actions → Deploy GitHub Pages → Run workflow**.
+
 ### Enable GitHub Pages (one-time)
 
 1. The repository must be **public** (required for free GitHub Pages hosting)
