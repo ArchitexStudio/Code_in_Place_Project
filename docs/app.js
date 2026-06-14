@@ -367,10 +367,10 @@ function rerollEra(){
   },18,target.team,teamAbbr);
 }
 
-function statLabels(pos){
-  if(pos==='QB')return ['PASS','TD','OVR'];
-  if(pos==='RB')return ['RUSH','TD','OVR'];
-  return ['REC YDS','TD','OVR'];
+function playerOvr(pl){return parseInt(pl[5],10)||0;}
+function statColumns(pos){
+  var ydsLbl=pos==='QB'?'PASS':(pos==='RB'?'RUSH':'REC');
+  return [{k:'ovr',l:'OVR'},{k:'yds',l:ydsLbl},{k:'td',l:'TD'},{k:'yrs',l:'YRS'},{k:'era',l:'ERA'}];
 }
 function extractPlayerStats(pl,pos){
   var t=cleanRSStat(pl[6]||''), yds='—', td='—', m;
@@ -384,75 +384,116 @@ function extractPlayerStats(pl,pos){
     m=t.match(/([\d,]+)\s+rec yds/i);if(m)yds=m[1];
     m=t.match(/(\d+)\s+TD/i);if(m)td=m[1];
   }
-  return {yds:yds,td:td,ovr:pl[5]};
+  var yrs=playerYears(pl).length;
+  return {ovr:playerOvr(pl),yds:yds,td:td==='—'?0:parseInt(td,10)||0,yrs:yrs,era:eraLabel(pl[4])};
 }
-function browserStatCell(val,lbl){
-  return '<div class="browser-stat">'+esc(fmtNum(val))+'<span class="browser-stat-lbl">'+esc(lbl)+'</span></div>';
+function statSortValue(pl,pos,key){
+  var st=extractPlayerStats(pl,pos);
+  if(key==='ovr')return st.ovr;
+  if(key==='yds')return parseInt(String(st.yds).replace(/,/g,''),10)||0;
+  if(key==='td')return typeof st.td==='number'?st.td:parseInt(st.td,10)||0;
+  if(key==='yrs')return st.yrs;
+  return 0;
 }
-function renderBrowserRows(pool,pos,onPick){
-  var labels=statLabels(pos), html='';
+function sortPlayerPool(pool,pos,key){
+  return pool.slice().sort(function(a,b){return statSortValue(b,pos,key)-statSortValue(a,pos,key);});
+}
+function browserStatCell(val,lbl,isOvr){
+  var cls='browser-stat'+(isOvr?' ovr-col':'');
+  return '<div class="'+cls+'"><span class="browser-stat-val">'+esc(fmtNum(val))+'</span><span class="browser-stat-lbl">'+esc(lbl)+'</span></div>';
+}
+function renderBrowserRows(pool,pos){
+  var cols=statColumns(pos), html='';
   for(var i=0;i<pool.length;i++){
-    (function(pl){
-      var st=extractPlayerStats(pl,pos);
-      html+=
-        '<div class="browser-row" data-name="'+esc(pl[1].toLowerCase())+'">'+
-          '<div class="browser-info">'+
-            '<div class="browser-name">'+esc(pl[1])+'</div>'+
-            '<div class="browser-pos">'+esc(pos)+'</div>'+
-            '<div class="browser-team">'+esc(teamAbbr(pl[3]))+' · '+esc(yearsLabel(pl))+'</div>'+
-          '</div>'+
-          browserStatCell(st.yds,labels[0])+
-          browserStatCell(st.td,labels[1])+
-          browserStatCell(st.ovr,labels[2])+
-        '</div>';
-    })(pool[i]);
+    var pl=pool[i], st=extractPlayerStats(pl,pos);
+    var vals={ovr:st.ovr,yds:st.yds,td:st.td,yrs:st.yrs,era:st.era};
+    html+='<div class="browser-row" data-name="'+esc(pl[1].toLowerCase())+'"><div class="browser-info">'+
+      '<div class="browser-name">'+esc(pl[1])+'</div>'+
+      '<div class="browser-pos">'+esc(pos)+'</div>'+
+      '<div class="browser-team">'+esc(teamAbbr(pl[3]))+' · '+esc(yearsLabel(pl))+'</div></div>';
+    for(var c=0;c<cols.length;c++){
+      html+=browserStatCell(vals[cols[c].k],cols[c].l,cols[c].k==='ovr');
+    }
+    html+='</div>';
+  }
+  return html;
+}
+function positionFilterHtml(activePos){
+  var pills=['QB','RB','WR','TE'], html='';
+  for(var i=0;i<pills.length;i++){
+    var p=pills[i];
+    html+='<span class="browser-filter'+(p===activePos?' active':' inactive')+'">'+p+'</span>';
   }
   return html;
 }
 function mountPlayerBrowser(el,pool,pos,onPick){
-  var labels=statLabels(pos);
+  var cols=statColumns(pos), sortKey='ovr';
+  var sorted=sortPlayerPool(pool,pos,sortKey);
+  // #region agent log
+  fetch('http://127.0.0.1:7329/ingest/df8bd037-d473-483f-90b0-a95855a8eebe',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1d4e7a'},body:JSON.stringify({sessionId:'1d4e7a',hypothesisId:'A',location:'app.js:mountPlayerBrowser',message:'pool mounted sorted by ovr',data:{pos:pos,count:sorted.length,top5:sorted.slice(0,5).map(function(p){return {name:p[1],ovr:playerOvr(p),type:typeof p[5]};}),isDescending:sorted.length<2||playerOvr(sorted[0])>=playerOvr(sorted[1])},timestamp:Date.now()})}).catch(function(){});
+  // #endregion
   el.style.display='block';
   el.className='player-browser';
   el.innerHTML=
-    '<div class="browser-toolbar">'+
-      '<input class="browser-search" type="search" placeholder="Search..." autocomplete="off">'+
-      '<span class="browser-count">'+pool.length+' player'+(pool.length===1?'':'s')+' available</span>'+
+    '<div class="browser-toolbar-top">'+
+      '<div class="browser-filters">'+positionFilterHtml(pos)+'</div>'+
+      '<div class="browser-search-wrap"><span class="browser-search-icon">⌕</span><input class="browser-search" type="search" placeholder="Search..." autocomplete="off"></div>'+
+      '<select class="browser-sort" aria-label="Sort by">'+
+        '<option value="ovr" selected>OVR</option><option value="yds">YDS</option><option value="td">TD</option><option value="yrs">YRS</option>'+
+      '</select>'+
     '</div>'+
-    '<div class="browser-head">'+
-      '<span>Player</span>'+
-      '<span class="bh-stat">'+labels[0]+'</span>'+
-      '<span class="bh-stat">'+labels[1]+'</span>'+
-      '<span class="bh-stat">'+labels[2]+'</span>'+
+    '<div class="browser-count-row"><span class="browser-count">'+sorted.length+' player'+(sorted.length===1?'':'s')+' available</span></div>'+
+    '<div class="browser-head"><span>Player</span>'+
+      cols.map(function(c){return '<span class="bh-stat">'+c.l+'</span>';}).join('')+
     '</div>'+
-    '<div class="browser-list">'+renderBrowserRows(pool,pos,onPick)+'</div>';
+    '<div class="browser-list">'+renderBrowserRows(sorted,pos)+'</div>';
   var list=el.querySelector('.browser-list');
-  list.querySelectorAll('.browser-row').forEach(function(row,idx){
-    row.onclick=function(){onPick(pool[idx],primaryYear(pool[idx]));};
-  });
+  var countEl=el.querySelector('.browser-count');
+  var sortSel=el.querySelector('.browser-sort');
   var input=el.querySelector('.browser-search');
-  var count=el.querySelector('.browser-count');
-  if(input){
-    input.oninput=function(){
-      var q=input.value.toLowerCase().trim(), shown=0;
-      list.querySelectorAll('.browser-row').forEach(function(row,i){
-        var match=!q||pool[i][1].toLowerCase().indexOf(q)!==-1;
-        row.style.display=match?'':'none';
-        if(match)shown++;
-      });
-      if(count)count.textContent=shown+' player'+(shown===1?'':'s')+' available';
+  var currentPool=sorted.slice();
+  function bindRows(){
+    list.innerHTML=renderBrowserRows(currentPool,pos);
+    list.querySelectorAll('.browser-row').forEach(function(row,idx){
+      row.onclick=function(){onPick(currentPool[idx],primaryYear(currentPool[idx]));};
+    });
+    applySearchFilter(input?input.value:'');
+  }
+  function applySearchFilter(q){
+    q=(q||'').toLowerCase().trim();
+    var shown=0;
+    list.querySelectorAll('.browser-row').forEach(function(row,i){
+      var match=!q||currentPool[i][1].toLowerCase().indexOf(q)!==-1;
+      row.style.display=match?'':'none';
+      if(match)shown++;
+    });
+    if(countEl)countEl.textContent=shown+' player'+(shown===1?'':'s')+' available';
+  }
+  if(sortSel){
+    sortSel.onchange=function(){
+      sortKey=sortSel.value;
+      currentPool=sortPlayerPool(pool,pos,sortKey);
+      // #region agent log
+      fetch('http://127.0.0.1:7329/ingest/df8bd037-d473-483f-90b0-a95855a8eebe',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1d4e7a'},body:JSON.stringify({sessionId:'1d4e7a',hypothesisId:'C',location:'app.js:sortChange',message:'re-sorted pool',data:{sortKey:sortKey,top3:currentPool.slice(0,3).map(function(p){return {name:p[1],val:statSortValue(p,pos,sortKey)};})},timestamp:Date.now()})}).catch(function(){});
+      // #endregion
+      bindRows();
     };
   }
+  if(input){input.oninput=function(){applySearchFilter(input.value);};}
+  bindRows();
 }
 function mountUnitBrowser(el,items,kind,onPick){
   el.style.display='block';
   el.className='player-browser';
-  var labels=kind==='def'?['PTS','YDS','OVR']:['RANK','YEAR','OVR'];
+  var labels=kind==='def'?['OVR','PTS','YDS','YRS','ERA']:['OVR','RANK','YEAR','YRS','ERA'];
+  var sorted=items.slice().sort(function(a,b){return (parseInt(b[4],10)||0)-(parseInt(a[4],10)||0);});
   var rows='';
-  for(var i=0;i<items.length;i++){
+  for(var i=0;i<sorted.length;i++){
     (function(u,idx){
       var m=kind==='def'?defMetricsFromData(u,idx):null;
-      var s1=kind==='def'?(m&&m.pointsAllowed!=null?m.pointsAllowed:'—'):('#'+(idx+1));
-      var s2=kind==='def'?(m&&m.yardsAllowed!=null?m.yardsAllowed:u[3]):u[3];
+      var ovr=parseInt(u[4],10)||0;
+      var s1=ovr, s2=kind==='def'?(m&&m.pointsAllowed!=null?m.pointsAllowed:'—'):('#'+(idx+1));
+      var s3=kind==='def'?(m&&m.yardsAllowed!=null?m.yardsAllowed:u[3]):u[3];
       var sub=kind==='def'?'DEF UNIT':'OL UNIT';
       rows+=
         '<div class="browser-row" data-name="'+esc(String(u[0]).toLowerCase())+'">'+
@@ -461,25 +502,27 @@ function mountUnitBrowser(el,items,kind,onPick){
             '<div class="browser-pos">'+sub+'</div>'+
             '<div class="browser-team">'+esc(teamAbbr(u[1]))+' · '+u[3]+'</div>'+
           '</div>'+
-          browserStatCell(s1,labels[0])+
-          browserStatCell(s2,labels[1])+
-          browserStatCell(u[4],labels[2])+
+          browserStatCell(s1,labels[0],true)+
+          browserStatCell(s2,labels[1],false)+
+          browserStatCell(s3,labels[2],false)+
+          browserStatCell(1,labels[3],false)+
+          browserStatCell(eraLabel(u[2]),labels[4],false)+
         '</div>';
-    })(items[i],i);
+    })(sorted[i],i);
   }
   el.innerHTML=
-    '<div class="browser-toolbar">'+
-      '<span class="browser-count">'+items.length+' unit'+(items.length===1?'':'s')+' available</span>'+
+    '<div class="browser-toolbar-top">'+
+      '<div class="browser-filters"><span class="browser-filter active">'+(kind==='def'?'DEF':'OL')+'</span></div>'+
+      '<div class="browser-search-wrap"><span class="browser-search-icon">⌕</span><input class="browser-search" type="search" placeholder="Search..." autocomplete="off"></div>'+
+      '<select class="browser-sort" aria-label="Sort by"><option value="ovr" selected>OVR</option></select>'+
     '</div>'+
-    '<div class="browser-head">'+
-      '<span>Unit</span>'+
-      '<span class="bh-stat">'+labels[0]+'</span>'+
-      '<span class="bh-stat">'+labels[1]+'</span>'+
-      '<span class="bh-stat">'+labels[2]+'</span>'+
+    '<div class="browser-count-row"><span class="browser-count">'+sorted.length+' unit'+(sorted.length===1?'':'s')+' available</span></div>'+
+    '<div class="browser-head"><span>Unit</span>'+
+      labels.map(function(l){return '<span class="bh-stat">'+l+'</span>';}).join('')+
     '</div>'+
     '<div class="browser-list">'+rows+'</div>';
   el.querySelectorAll('.browser-row').forEach(function(row,idx){
-    row.onclick=function(){onPick(items[idx],idx);};
+    row.onclick=function(){onPick(sorted[idx],idx);};
   });
 }
 
@@ -497,7 +540,10 @@ function showOpts(team,year){
       if(teamPick)pool.push(pl);
       else if(playerOnTeamYear(pl,team,year))pool.push(pl);
     }
-    pool.sort(function(a,b){return b[5]-a[5];});
+    pool.sort(function(a,b){return playerOvr(b)-playerOvr(a);});
+    // #region agent log
+    fetch('http://127.0.0.1:7329/ingest/df8bd037-d473-483f-90b0-a95855a8eebe',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1d4e7a'},body:JSON.stringify({sessionId:'1d4e7a',hypothesisId:'B',location:'app.js:showOpts',message:'pool after sort',data:{pos:pos,team:teamAbbr(teamKey),count:pool.length,top5:pool.slice(0,5).map(function(p){return {name:p[1],ovr:playerOvr(p),raw:p[5]};}),bottom2:pool.slice(-2).map(function(p){return {name:p[1],ovr:playerOvr(p)};})},timestamp:Date.now()})}).catch(function(){});
+    // #endregion
     el.innerHTML='';
     if(!pool.length){
       el.style.display='block';
