@@ -54,6 +54,14 @@ jobs:
       - name: Build best players by team report
         run: python scripts/build_best_players.py
 
+      - name: Stamp cache-busting build version
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          sed -i.bak "s/__BUILD_VERSION__/${SHA}/g" docs/index.html
+          rm -f docs/index.html.bak
+          echo "Deployed build stamp: ${SHA}"
+          grep -o "app.js?v=[^\"']*" docs/index.html | head -1
+
       - name: Setup Pages
         uses: actions/configure-pages@983d7736d9b0ae728b81ab479565c72886d7745b # v5
         with:

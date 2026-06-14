@@ -889,6 +889,13 @@ function initGameData(data){
   if(loading)loading.style.display='none';
   var startBtn=document.getElementById('startBtn');
   if(startBtn)startBtn.disabled=false;
+  var badge=document.getElementById('build-badge');
+  var build=window.__APP_BUILD__||'unknown';
+  if(badge)badge.textContent='Build '+build;
+  // #region agent log
+  console.info('[17-0] init', {build:build, players:PL.length, hasBrowserUI:typeof mountPlayerBrowser==='function'});
+  fetch('http://127.0.0.1:7329/ingest/df8bd037-d473-483f-90b0-a95855a8eebe',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'1d4e7a'},body:JSON.stringify({sessionId:'1d4e7a',hypothesisId:'H1',location:'app.js:initGameData',message:'app initialized',data:{build:build,players:PL.length,hasBrowserUI:typeof mountPlayerBrowser==='function'},timestamp:Date.now()})}).catch(function(){});
+  // #endregion
 }
 
 loadGameData()

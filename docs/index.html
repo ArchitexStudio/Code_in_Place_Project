@@ -8,12 +8,13 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="format-detection" content="telephone=no">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
 <link rel="canonical" href="https://architexstudio.github.io/Code_in_Place_Project/">
 <title>17-0: Build Your Perfect Football Season</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" href="app.js" as="script">
+<link rel="preload" href="app.js?v=__BUILD_VERSION__" as="script">
 <link rel="preload" href="nfl_data.json.gz" as="fetch" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
@@ -127,6 +128,7 @@ body{font-family:'Oswald',sans-serif;background:var(--bg);color:var(--ink);min-h
 .browser-stat.ovr-col .browser-stat-val{color:#fbbf24}
 .browser-empty{padding:20px;text-align:center;color:#64748b;font-size:13px}
 #S1 .noopts{background:#0f172a;border-color:#334155;color:#94a3b8;border-radius:12px;padding:16px;margin-top:8px;font-family:sans-serif}
+#build-badge{position:fixed;bottom:8px;right:10px;font-size:10px;color:#64748b;font-family:sans-serif;z-index:1000;pointer-events:none;opacity:.55;letter-spacing:.04em}
 
 /* Buttons */
 .btn{font-family:'Oswald',sans-serif;font-size:14px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:11px 28px;border:2px solid var(--header);border-radius:8px;cursor:pointer;background:var(--header);color:var(--header-text);transition:all .2s}
@@ -402,6 +404,8 @@ body{font-family:'Oswald',sans-serif;background:var(--bg);color:var(--ink);min-h
   <div id="loading-msg">Loading NFL data…</div>
   <div id="loading-sub" style="font-size:12px;color:var(--muted)">Preparing 1999–2025 rosters</div>
 </div>
-<script src="app.js" defer></script>
+<div id="build-badge">Build __BUILD_VERSION__</div>
+<script>window.__APP_BUILD__='__BUILD_VERSION__';</script>
+<script src="app.js?v=__BUILD_VERSION__" defer></script>
 </body>
 </html>
