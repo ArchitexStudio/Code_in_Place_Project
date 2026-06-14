@@ -1,4 +1,4 @@
-var PL=[], OLU=[], DEFU=[], TMS=[], UNIT_YEARS=[], DIVISIONS=[], ERAS=["1999–2009","2010s","2020s"];
+var PL=[], OLU=[], DEFU=[], TMS=[], UNIT_YEARS=[], ERAS=["1999–2009","2010s","2020s"];
 var IDX={byPosTeam:{},teamsByPos:{},olByYear:{},defByYear:{}};
 var DATA_CACHE='nfl-170-cache-v1';
 
@@ -137,7 +137,13 @@ function playerOnTeam(pl,team){
 }
 function primaryYear(pl){
   var yrs=playerYears(pl);
-  return yrs.length?yrs[0]:null;
+  return yrs.length?yrs[yrs.length-1]:null;
+}
+function yearsLabel(pl){
+  var yrs=playerYears(pl).slice().sort(function(a,b){return a-b;});
+  if(!yrs.length)return '';
+  if(yrs.length===1)return String(yrs[0]);
+  return yrs[0]+'–'+yrs[yrs.length-1];
 }
 function isTeamPick(){
   if(!G.DO||G.idx>=G.DO.length)return false;
@@ -223,7 +229,7 @@ function refreshDraft(){
   document.getElementById('rrera').textContent='↩ New Year';
   document.getElementById('spbtn').textContent=mode?'SPIN YEAR':(teamPick?'SPIN TEAM':'SPIN');
   var spinLbl=document.getElementById('spin-lbl')||document.querySelector('.spinlbl');
-  if(spinLbl)spinLbl.textContent=isDef?'Spin year · equal odds · top 3 defenses for that season':(isOL?'Spin year · equal odds · top 3 OL units for that season':(teamPick?'Spin a franchise · equal odds · all '+pick.p+' seasons 1999–2025':'Spin year + team · equal odds per valid combo'));
+  if(spinLbl)spinLbl.textContent=isDef?'Spin year · equal odds · top 3 defenses for that season':(isOL?'Spin year · equal odds · top 3 OL units for that season':(teamPick?'Spin team · equal odds · combined career stats 1999–2025':'Spin year + team · equal odds per valid combo'));
   document.getElementById('rvt').textContent='???';document.getElementById('rvd').textContent='???';
   ['rvt','rvd'].forEach(function(id){document.getElementById(id).classList.remove('bl');});
   ['rte','rde'].forEach(function(id){document.getElementById(id).classList.remove('sp');});
@@ -350,9 +356,9 @@ function rerollEra(){
 function showOpts(team,year){
   try{
     var pos=G.DO[G.idx].p;
-    var el=document.getElementById('opts');el.style.display='grid';el.className='cards cards-scroll';
-    if(pos==='OL'){showUnits(team,eraFromYear(team));return;}
-    if(pos==='DEF'){showDefUnits(team,eraFromYear(team));return;}
+    var el=document.getElementById('opts');
+    if(pos==='OL'){el.style.display='grid';el.className='cards';showUnits(team,eraFromYear(team));return;}
+    if(pos==='DEF'){el.style.display='grid';el.className='cards';showDefUnits(team,eraFromYear(team));return;}
     var teamPick=isTeamPick(), pool=[], teamKey=canonicalTeam(team);
     var source=IDX.byPosTeam[pos]&&IDX.byPosTeam[pos][teamKey]?IDX.byPosTeam[pos][teamKey]:[];
     for(var i=0;i<source.length;i++){
@@ -361,29 +367,30 @@ function showOpts(team,year){
       if(teamPick)pool.push(pl);
       else if(playerOnTeamYear(pl,team,year))pool.push(pl);
     }
-    pool.sort(function(a,b){
-      var ya=primaryYear(a)||0, yb=primaryYear(b)||0;
-      if(yb!==ya)return yb-ya;
-      return b[5]-a[5];
-    });
-    if(teamPick)pool=shuffle(pool);
+    pool.sort(function(a,b){return b[5]-a[5];});
+    el.style.display='block';
+    el.className='pick-list';
     el.innerHTML='';
     if(!pool.length){
-      el.innerHTML='<div class="noopts">No loaded '+G.DO[G.idx].l+' options for <strong>'+esc(canonicalTeam(team))+'</strong>'+(teamPick?' (1999–2025)':' in <strong>'+esc(year)+'</strong>')+'. Use <strong>↩ New Team</strong>.</div>';
+      el.innerHTML='<div class="noopts">No loaded '+G.DO[G.idx].l+' options for <strong>'+esc(canonicalTeam(team))+'</strong>. Use <strong>↩ New Team</strong>.</div>';
       return;
     }
-    if(teamPick){
-      el.innerHTML+='<div class="pick-section-title">All '+esc(canonicalTeam(team))+' '+esc(pos)+' · 1999–2025 · '+pool.length+' season'+(pool.length===1?'':'s')+' on roster</div>';
-    }
-    var posLabel=pos.replace('OLB43','OLB').replace('OLB34','OLB').replace('DE3','DE');
+    el.innerHTML='<div class="pick-list-hdr">'+esc(canonicalTeam(team))+' '+esc(pos)+' · ranked by combined REG stats · '+pool.length+' player'+(pool.length===1?'':'s')+'</div>';
     for(var i=0;i<pool.length;i++){
-      (function(pl){
-        var yr=primaryYear(pl)||year;
-        var c=document.createElement('div');c.className='card';
-        c.innerHTML='<div class="cr2">'+pl[5]+'</div><div class="cp">'+esc(posLabel)+'</div><div class="cn">'+esc(pl[1])+'</div><div class="ct">'+esc(canonicalTeam(pl[3]))+' · '+esc(yr)+'</div><div class="ce">REGULAR SEASON · '+esc(yr)+'</div><div class="cs cs-big">'+esc(cleanRSStat(pl[6]))+'</div>';
-        c.onclick=function(){pickP(pl,yr);};
-        el.appendChild(c);
-      })(pool[i]);
+      (function(pl,rank){
+        var row=document.createElement('div');
+        row.className='pick-row';
+        row.innerHTML=
+          '<div class="pick-rank">#'+rank+'</div>'+
+          '<div class="pick-main">'+
+            '<div class="pick-name">'+esc(pl[1])+'</div>'+
+            '<div class="pick-meta">'+esc(canonicalTeam(pl[3]))+' · '+esc(yearsLabel(pl))+' · REG combined</div>'+
+            '<div class="pick-stats">'+esc(cleanRSStat(pl[6]))+'</div>'+
+          '</div>'+
+          '<div class="pick-ovr">'+pl[5]+'</div>';
+        row.onclick=function(){pickP(pl,primaryYear(pl));};
+        el.appendChild(row);
+      })(pool[i], i+1);
     }
   }catch(e){console.warn(e);}
 }
@@ -528,8 +535,9 @@ function defSlots(){return ['DEF'];}
 function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 function cleanRSStat(v){
   return String(v||'')
-    .replace(/^\s*[A-Z]{2,5}(?:\/[A-Z]{2,5})?\s+RS\s+only:\s*/i,'')
-    .replace(/\bRS\s+only:\s*/gi,'')
+    .replace(/^\s*[A-Z]{2,5}(?:\/[A-Z]{2,5})?\s+RS\s+(?:only|combined):\s*/i,'')
+    .replace(/\bRS\s+combined:\s*/gi,'')
+    .replace(/\bcombined:\s*/gi,'')
     .replace(/\bRS\s+records?\b/gi,'records')
     .replace(/\bRS\s+yrs?\b/gi,'seasons')
     .replace(/\bRS\b/gi,'')
@@ -713,56 +721,14 @@ function confetti(){
 }
 
 
-function renderFranchiseGrid(){
-  var root=document.getElementById('franchise-grid');
-  if(!root||!DIVISIONS.length)return;
-  root.innerHTML='';
-  var lastConf='';
-  DIVISIONS.forEach(function(div){
-    if(div.conf!==lastConf){
-      lastConf=div.conf;
-      var confEl=document.createElement('div');
-      confEl.className='franchise-conf';
-      confEl.textContent=div.conf;
-      root.appendChild(confEl);
-    }
-    var block=document.createElement('div');
-    block.innerHTML='<div class="franchise-div">'+esc(div.label)+'</div>';
-    var tiles=document.createElement('div');
-    tiles.className='franchise-tiles';
-    div.teams.forEach(function(team){
-      var tile=document.createElement('button');
-      tile.type='button';
-      tile.className='franchise-tile';
-      tile.dataset.abbr=team.abbr;
-      tile.dataset.name=team.name;
-      var pct=Math.round((team.difficulty||0.5)*100);
-      tile.innerHTML='<div class="franchise-abbr">'+esc(team.abbr)+'</div><div class="franchise-name">'+esc(team.name)+'</div><div class="franchise-bar" style="background:linear-gradient(90deg,#22c55e 0%,#eab308 '+pct+'%,#ef4444 100%)"></div>';
-      tile.onclick=function(){selectFranchiseTile(tile,team);};
-      tiles.appendChild(tile);
-    });
-    block.appendChild(tiles);
-    root.appendChild(block);
-  });
-}
-function selectFranchiseTile(tile,team){
-  var tiles=document.querySelectorAll('.franchise-tile');
-  for(var i=0;i<tiles.length;i++)tiles[i].classList.remove('sel');
-  tile.classList.add('sel');
-  var blurb=document.getElementById('franchise-blurb');
-  if(blurb)blurb.textContent='Explore '+team.name+' ('+team.abbr+') — all QB/RB/WR/TE seasons from 1999–2025 are in the draft pool when this franchise is spun.';
-}
-
 function initGameData(data){
   PL=data.players||[];
   OLU=data.ol_units||[];
   DEFU=data.defense_units||[];
   TMS=data.teams||[];
   UNIT_YEARS=data.unit_years||[];
-  DIVISIONS=data.divisions||[];
   normalizeFranchiseData();
   buildIndices();
-  renderFranchiseGrid();
   var loading=document.getElementById('loading');
   if(loading)loading.style.display='none';
   var startBtn=document.getElementById('startBtn');
