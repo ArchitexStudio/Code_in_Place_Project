@@ -89,6 +89,18 @@ var FRANCHISE_ALIAS={
   "Los Angeles Raiders":"Las Vegas Raiders","LA Raiders":"Las Vegas Raiders"
 };
 function canonicalTeam(team){return FRANCHISE_ALIAS[team]||team;}
+var TEAM_ABBR={
+  "Arizona Cardinals":"ARI","Atlanta Falcons":"ATL","Baltimore Ravens":"BAL","Buffalo Bills":"BUF",
+  "Carolina Panthers":"CAR","Chicago Bears":"CHI","Cincinnati Bengals":"CIN","Cleveland Browns":"CLE",
+  "Dallas Cowboys":"DAL","Denver Broncos":"DEN","Detroit Lions":"DET","Green Bay Packers":"GB",
+  "Houston Texans":"HOU","Indianapolis Colts":"IND","Jacksonville Jaguars":"JAX","Kansas City Chiefs":"KC",
+  "Miami Dolphins":"MIA","Minnesota Vikings":"MIN","New England Patriots":"NE","New Orleans Saints":"NO",
+  "New York Giants":"NYG","New York Jets":"NYJ","Las Vegas Raiders":"LV","Philadelphia Eagles":"PHI",
+  "Pittsburgh Steelers":"PIT","Los Angeles Chargers":"LAC","San Francisco 49ers":"SF","Seattle Seahawks":"SEA",
+  "Los Angeles Rams":"LAR","Tampa Bay Buccaneers":"TB","Tennessee Titans":"TEN","Washington Commanders":"WAS"
+};
+function teamAbbr(team){return TEAM_ABBR[canonicalTeam(team)]||canonicalTeam(team).split(' ').pop().substring(0,3).toUpperCase();}
+function fmtNum(n){if(n==null||n==='—')return '—';var s=String(n).replace(/,/g,'');return isNaN(s)?n:Number(s).toLocaleString();}
 function canonicalUnitName(name){
   return String(name||'')
     .replace(/St\. Louis Rams/g,'Los Angeles Rams').replace(/STL Rams/g,'Los Angeles Rams')
@@ -191,13 +203,13 @@ function selectScheme(s){
   G.scheme=s;G.stage='defense';G.idx=0;
   G.DO=[{sl:"DEF",p:"DEF",l:"Team Defense Unit",ph:"def"}];
   document.getElementById('schm-lbl').textContent=s==='43'?'4-3':'3-4';
-  document.getElementById('def-sh').textContent='🛡️ TEAM DEFENSE BOARD ('+(s==='43'?'4-3':'3-4')+')';
+  document.getElementById('def-sh').textContent='DEPTH CHART';
   showScr('S1');refreshDraft();
 }
 function startDraft(){
   G={idx:0,roster:{},used:new Set(),spinning:false,games:[],tr:0,spinTeam:'',spinEra:'',scheme:'',DO:DO_OFF.slice(),stage:'offense'};
   document.getElementById('schm-lbl').textContent='OFFENSE';
-  document.getElementById('def-sh').textContent='🏈 OFFENSE FIELD DEPTH CHART';
+  document.getElementById('def-sh').textContent='OFFENSE DEPTH CHART';
   showScr('S1');refreshDraft();
 }
 
@@ -217,19 +229,20 @@ function refreshDraft(){
     d.className='pip'+(i<G.idx?' dn':'')+(i===G.idx?' cr':'');
     pb.appendChild(d);
   }
-  var mode=isYearUnitPick(), teamPick=isTeamPick(), isDef=pick.p==='DEF', isOL=pick.p==='OL';
-  document.querySelector('#rte .rl').textContent='YEAR';
-  document.querySelector('#rde .rl').textContent='TEAM';
-  document.getElementById('rte').style.display=teamPick?'none':'';
-  document.querySelector('.sx').style.display=(mode||teamPick)?'none':'';
-  document.getElementById('rde').style.display=mode?'none':'';
+  var mode=isYearUnitPick(), teamPick=isTeamPick();
+  var eraCard=document.getElementById('rte');
+  var teamCard=document.getElementById('rde');
+  var eraFoot=document.getElementById('era-foot-lbl');
+  eraCard.classList.toggle('hide',teamPick);
+  teamCard.classList.toggle('hide',mode);
+  if(eraFoot)eraFoot.style.visibility=(teamPick||mode)?'hidden':'visible';
+  var teamFoot=document.querySelector('.spin-card-foot span:first-child');
+  if(teamFoot)teamFoot.style.visibility=mode?'hidden':'visible';
   document.getElementById('rrteam').style.display='';
-  document.getElementById('rrteam').textContent=teamPick?'↩ New Team':'↩ New Year';
+  document.getElementById('rrteam').textContent=teamPick?'↩ New Team':(mode?'↩ New Year':'↩ New Year');
   document.getElementById('rrera').style.display=(mode||teamPick)?'none':'';
   document.getElementById('rrera').textContent='↩ New Year';
   document.getElementById('spbtn').textContent=mode?'SPIN YEAR':(teamPick?'SPIN TEAM':'SPIN');
-  var spinLbl=document.getElementById('spin-lbl')||document.querySelector('.spinlbl');
-  if(spinLbl)spinLbl.textContent=isDef?'Spin year · equal odds · top 3 defenses for that season':(isOL?'Spin year · equal odds · top 3 OL units for that season':(teamPick?'Spin team · equal odds · combined career stats 1999–2025':'Spin year + team · equal odds per valid combo'));
   document.getElementById('rvt').textContent='???';document.getElementById('rvd').textContent='???';
   ['rvt','rvd'].forEach(function(id){document.getElementById(id).classList.remove('bl');});
   ['rte','rde'].forEach(function(id){document.getElementById(id).classList.remove('sp');});
@@ -240,16 +253,17 @@ function refreshDraft(){
   renderClip();
 }
 
-function spinReel(el,valEl,pool,onDone,ticks,forcedResult){
+function spinReel(el,valEl,pool,onDone,ticks,forcedResult,fmt){
   if(!pool.length){if(onDone)onDone(null);return;}
+  fmt=fmt||function(x){return x;};
   el.classList.add('sp');valEl.classList.add('bl');
   var c=0,tot=ticks||22;
   var target=forcedResult==null?pickUniform(pool):forcedResult;
   var iv=setInterval(function(){
-    c++;valEl.textContent=pool[randInt(pool.length)];
+    c++;valEl.textContent=fmt(pool[randInt(pool.length)]);
     if(c>=tot){
       clearInterval(iv);
-      valEl.textContent=target;valEl.classList.remove('bl');el.classList.remove('sp');
+      valEl.textContent=fmt(target);valEl.classList.remove('bl');el.classList.remove('sp');
       if(onDone)onDone(target);
     }
   },80);
@@ -294,7 +308,7 @@ function doSpin(){
       G.spinTeam=y;G.spinEra=eraFromYear(y);G.spinning=false;
       document.getElementById('rrrow').style.display='flex';
       showOpts(y,G.spinEra);
-    },26,target);
+    },26,target,String);
     return;
   }
   if(teamPick){
@@ -304,14 +318,14 @@ function doSpin(){
       G.spinTeam=t;G.spinEra='';G.spinning=false;
       document.getElementById('rrrow').style.display='flex';
       showOpts(t);
-    },22,target);
+    },22,target,teamAbbr);
     return;
   }
   var combos=eligibleCombos(), target=pickUniform(combos);
   if(!target){G.spinning=false;document.getElementById('spbtn').disabled=false;return;}
   var yd=false,td=false,fy='',ft='';
-  spinReel(document.getElementById('rte'),document.getElementById('rvt'),UNIT_YEARS,function(r){fy=r;yd=true;if(td)fin(fy,ft);},26,target.year);
-  spinReel(document.getElementById('rde'),document.getElementById('rvd'),TMS,function(r){ft=r;td=true;if(yd)fin(fy,ft);},22,target.team);
+  spinReel(document.getElementById('rte'),document.getElementById('rvt'),UNIT_YEARS,function(r){fy=r;yd=true;if(td)fin(fy,ft);},26,target.year,String);
+  spinReel(document.getElementById('rde'),document.getElementById('rvd'),TMS,function(r){ft=r;td=true;if(yd)fin(fy,ft);},22,target.team,teamAbbr);
   function fin(y,t){G.spinTeam=t;G.spinEra=y;G.spinning=false;document.getElementById('rrrow').style.display='flex';showOpts(t,y);}
 }
 function rerollTeam(){
@@ -322,7 +336,7 @@ function rerollTeam(){
     if(!target){G.spinning=false;return;}
     spinReel(document.getElementById('rde'),document.getElementById('rvd'),teams,function(t){
       G.spinTeam=t;G.spinEra='';G.spinning=false;showOpts(t);
-    },18,target);
+    },18,target,teamAbbr);
     return;
   }
   var years=eligibleYears(), target=null;
@@ -331,7 +345,7 @@ function rerollTeam(){
     if(!target){G.spinning=false;return;}
     spinReel(document.getElementById('rte'),document.getElementById('rvt'),years,function(r){
       G.spinTeam=r;G.spinEra=eraFromYear(r);G.spinning=false;showOpts(r,G.spinEra);
-    },18,target);
+    },18,target,String);
     return;
   }
   var sameTeam=eligibleCombos().filter(function(c){return c.team===G.spinTeam;});
@@ -339,8 +353,8 @@ function rerollTeam(){
   target=pickUniform(pool);
   if(!target){G.spinning=false;return;}
   spinReel(document.getElementById('rte'),document.getElementById('rvt'),UNIT_YEARS,function(r){
-    G.spinTeam=target.team;G.spinEra=r;document.getElementById('rvd').textContent=target.team;G.spinning=false;showOpts(target.team,r);
-  },18,target.year);
+    G.spinTeam=target.team;G.spinEra=r;document.getElementById('rvd').textContent=teamAbbr(target.team);G.spinning=false;showOpts(target.team,r);
+  },18,target.year,String);
 }
 function rerollEra(){
   if(G.spinning||isYearUnitPick()||isTeamPick())return;G.spinning=true;
@@ -349,16 +363,132 @@ function rerollEra(){
   if(!target){G.spinning=false;return;}
   var teams=eligibleTeams().length?eligibleTeams():TMS;
   spinReel(document.getElementById('rde'),document.getElementById('rvd'),teams,function(r){
-    G.spinTeam=r;G.spinEra=target.year;document.getElementById('rvt').textContent=target.year;G.spinning=false;showOpts(r,target.year);
-  },18,target.team);
+    G.spinTeam=r;G.spinEra=target.year;document.getElementById('rvt').textContent=String(target.year);G.spinning=false;showOpts(r,target.year);
+  },18,target.team,teamAbbr);
+}
+
+function statLabels(pos){
+  if(pos==='QB')return ['PASS','TD','OVR'];
+  if(pos==='RB')return ['RUSH','TD','OVR'];
+  return ['REC YDS','TD','OVR'];
+}
+function extractPlayerStats(pl,pos){
+  var t=cleanRSStat(pl[6]||''), yds='—', td='—', m;
+  if(pos==='QB'){
+    m=t.match(/([\d,]+)\s+pass yds/i);if(m)yds=m[1];
+    m=t.match(/(\d+)\s+(?:pass\s+)?TD/i);if(!m)m=t.match(/(\d+)\s+TD/i);if(m)td=m[1];
+  }else if(pos==='RB'){
+    m=t.match(/([\d,]+)\s+rush yds/i);if(m)yds=m[1];
+    m=t.match(/(\d+)\s+TD/i);if(m)td=m[1];
+  }else{
+    m=t.match(/([\d,]+)\s+rec yds/i);if(m)yds=m[1];
+    m=t.match(/(\d+)\s+TD/i);if(m)td=m[1];
+  }
+  return {yds:yds,td:td,ovr:pl[5]};
+}
+function browserStatCell(val,lbl){
+  return '<div class="browser-stat">'+esc(fmtNum(val))+'<span class="browser-stat-lbl">'+esc(lbl)+'</span></div>';
+}
+function renderBrowserRows(pool,pos,onPick){
+  var labels=statLabels(pos), html='';
+  for(var i=0;i<pool.length;i++){
+    (function(pl){
+      var st=extractPlayerStats(pl,pos);
+      html+=
+        '<div class="browser-row" data-name="'+esc(pl[1].toLowerCase())+'">'+
+          '<div class="browser-info">'+
+            '<div class="browser-name">'+esc(pl[1])+'</div>'+
+            '<div class="browser-pos">'+esc(pos)+'</div>'+
+            '<div class="browser-team">'+esc(teamAbbr(pl[3]))+' · '+esc(yearsLabel(pl))+'</div>'+
+          '</div>'+
+          browserStatCell(st.yds,labels[0])+
+          browserStatCell(st.td,labels[1])+
+          browserStatCell(st.ovr,labels[2])+
+        '</div>';
+    })(pool[i]);
+  }
+  return html;
+}
+function mountPlayerBrowser(el,pool,pos,onPick){
+  var labels=statLabels(pos);
+  el.style.display='block';
+  el.className='player-browser';
+  el.innerHTML=
+    '<div class="browser-toolbar">'+
+      '<input class="browser-search" type="search" placeholder="Search..." autocomplete="off">'+
+      '<span class="browser-count">'+pool.length+' player'+(pool.length===1?'':'s')+' available</span>'+
+    '</div>'+
+    '<div class="browser-head">'+
+      '<span>Player</span>'+
+      '<span class="bh-stat">'+labels[0]+'</span>'+
+      '<span class="bh-stat">'+labels[1]+'</span>'+
+      '<span class="bh-stat">'+labels[2]+'</span>'+
+    '</div>'+
+    '<div class="browser-list">'+renderBrowserRows(pool,pos,onPick)+'</div>';
+  var list=el.querySelector('.browser-list');
+  list.querySelectorAll('.browser-row').forEach(function(row,idx){
+    row.onclick=function(){onPick(pool[idx],primaryYear(pool[idx]));};
+  });
+  var input=el.querySelector('.browser-search');
+  var count=el.querySelector('.browser-count');
+  if(input){
+    input.oninput=function(){
+      var q=input.value.toLowerCase().trim(), shown=0;
+      list.querySelectorAll('.browser-row').forEach(function(row,i){
+        var match=!q||pool[i][1].toLowerCase().indexOf(q)!==-1;
+        row.style.display=match?'':'none';
+        if(match)shown++;
+      });
+      if(count)count.textContent=shown+' player'+(shown===1?'':'s')+' available';
+    };
+  }
+}
+function mountUnitBrowser(el,items,kind,onPick){
+  el.style.display='block';
+  el.className='player-browser';
+  var labels=kind==='def'?['PTS','YDS','OVR']:['RANK','YEAR','OVR'];
+  var rows='';
+  for(var i=0;i<items.length;i++){
+    (function(u,idx){
+      var m=kind==='def'?defMetricsFromData(u,idx):null;
+      var s1=kind==='def'?(m&&m.pointsAllowed!=null?m.pointsAllowed:'—'):('#'+(idx+1));
+      var s2=kind==='def'?(m&&m.yardsAllowed!=null?m.yardsAllowed:u[3]):u[3];
+      var sub=kind==='def'?'DEF UNIT':'OL UNIT';
+      rows+=
+        '<div class="browser-row" data-name="'+esc(String(u[0]).toLowerCase())+'">'+
+          '<div class="browser-info">'+
+            '<div class="browser-name">'+esc(canonicalUnitName(u[0]))+'</div>'+
+            '<div class="browser-pos">'+sub+'</div>'+
+            '<div class="browser-team">'+esc(teamAbbr(u[1]))+' · '+u[3]+'</div>'+
+          '</div>'+
+          browserStatCell(s1,labels[0])+
+          browserStatCell(s2,labels[1])+
+          browserStatCell(u[4],labels[2])+
+        '</div>';
+    })(items[i],i);
+  }
+  el.innerHTML=
+    '<div class="browser-toolbar">'+
+      '<span class="browser-count">'+items.length+' unit'+(items.length===1?'':'s')+' available</span>'+
+    '</div>'+
+    '<div class="browser-head">'+
+      '<span>Unit</span>'+
+      '<span class="bh-stat">'+labels[0]+'</span>'+
+      '<span class="bh-stat">'+labels[1]+'</span>'+
+      '<span class="bh-stat">'+labels[2]+'</span>'+
+    '</div>'+
+    '<div class="browser-list">'+rows+'</div>';
+  el.querySelectorAll('.browser-row').forEach(function(row,idx){
+    row.onclick=function(){onPick(items[idx],idx);};
+  });
 }
 
 function showOpts(team,year){
   try{
     var pos=G.DO[G.idx].p;
     var el=document.getElementById('opts');
-    if(pos==='OL'){el.style.display='grid';el.className='cards';showUnits(team,eraFromYear(team));return;}
-    if(pos==='DEF'){el.style.display='grid';el.className='cards';showDefUnits(team,eraFromYear(team));return;}
+    if(pos==='OL'){showUnits(team,eraFromYear(team));return;}
+    if(pos==='DEF'){showDefUnits(team,eraFromYear(team));return;}
     var teamPick=isTeamPick(), pool=[], teamKey=canonicalTeam(team);
     var source=IDX.byPosTeam[pos]&&IDX.byPosTeam[pos][teamKey]?IDX.byPosTeam[pos][teamKey]:[];
     for(var i=0;i<source.length;i++){
@@ -368,90 +498,48 @@ function showOpts(team,year){
       else if(playerOnTeamYear(pl,team,year))pool.push(pl);
     }
     pool.sort(function(a,b){return b[5]-a[5];});
-    el.style.display='block';
-    el.className='pick-list';
     el.innerHTML='';
     if(!pool.length){
-      el.innerHTML='<div class="noopts">No loaded '+G.DO[G.idx].l+' options for <strong>'+esc(canonicalTeam(team))+'</strong>. Use <strong>↩ New Team</strong>.</div>';
+      el.style.display='block';
+      el.className='';
+      el.innerHTML='<div class="noopts">No loaded '+G.DO[G.idx].l+' options for <strong>'+esc(teamAbbr(team))+'</strong>. Use <strong>↩ New Team</strong>.</div>';
       return;
     }
-    el.innerHTML='<div class="pick-list-hdr">'+esc(canonicalTeam(team))+' '+esc(pos)+' · ranked by combined REG stats · '+pool.length+' player'+(pool.length===1?'':'s')+'</div>';
-    for(var i=0;i<pool.length;i++){
-      (function(pl,rank){
-        var row=document.createElement('div');
-        row.className='pick-row';
-        row.innerHTML=
-          '<div class="pick-rank">#'+rank+'</div>'+
-          '<div class="pick-main">'+
-            '<div class="pick-name">'+esc(pl[1])+'</div>'+
-            '<div class="pick-meta">'+esc(canonicalTeam(pl[3]))+' · '+esc(yearsLabel(pl))+' · REG combined</div>'+
-            '<div class="pick-stats">'+esc(cleanRSStat(pl[6]))+'</div>'+
-          '</div>'+
-          '<div class="pick-ovr">'+pl[5]+'</div>';
-        row.onclick=function(){pickP(pl,primaryYear(pl));};
-        el.appendChild(row);
-      })(pool[i], i+1);
-    }
+    mountPlayerBrowser(el,pool,pos,function(pl,y){pickP(pl,y);});
   }catch(e){console.warn(e);}
 }
 
 function showUnits(year,era){
   try{
-    var el=document.getElementById('opts');el.style.display='grid';el.className='cards';el.innerHTML='';
+    var el=document.getElementById('opts');el.innerHTML='';
     year=parseInt(year,10);if(!year){year=2024;}era=eraFromYear(year);G.spinEra=era;
     var yearPool=(IDX.olByYear[year]||[]).slice().sort(function(a,b){return b[4]-a[4];}).slice(0,3);
-    el.innerHTML+='<div class="def-note"><strong>O-Line rule:</strong> Pick one full offensive-line team unit. No individual linemen. The board shows only the top 3 seeded OL units for the selected year. Range: <strong>1999–2025</strong>.</div>';
-    if(yearPool.length){
-      el.innerHTML+='<div class="def-section-title">Top 3 Offensive-Line Units · '+year+' Regular Season</div>';
-      renderOLCards(yearPool,'Y');
-    }else{
-      el.innerHTML+='<div class="noopts">No OL-unit data is loaded for '+year+' yet. In production this year populates from nflverse team OL data after the regular season is complete. Use ↩ New Year.</div>';
+    if(!yearPool.length){
+      el.style.display='block';
+      el.innerHTML='<div class="noopts">No OL-unit data for '+year+'. Use ↩ New Year.</div>';
+      return;
     }
-    function renderOLCards(list,bucket){
-      if(!list.length&&bucket==='Y'){return;}
-      for(var i=0;i<list.length;i++){
-        (function(u,idx){
-          var c=document.createElement('div');c.className='card u';
-          c.innerHTML='<div class="cp">'+(bucket==='Y'?'YEAR TOP 3':'ERA TOP 10')+' · OL UNIT</div><div class="def-unit-rank">'+(bucket==='Y'?'#'+(idx+1):u[4])+'</div><div class="cun">'+esc(canonicalUnitName(u[0]))+'</div><div class="ct">'+esc(canonicalTeam(u[1]))+' · '+u[3]+'</div><div class="ce">'+esc(eraLabel(u[2]))+' · REGULAR-SEASON OL UNIT</div><div class="cum">'+esc(cleanRSStat(u[5]))+'</div><span class="def-tag">Full OL unit</span><span class="def-tag">Team-level stats</span>';
-          c.onclick=function(){pickU(u);};
-          el.appendChild(c);
-        })(list[i],i);
-      }
-    }
+    mountUnitBrowser(el,yearPool,'ol',function(u){pickU(u);});
   }catch(e){console.warn(e);}
 }
 
 function showDefUnits(year,era){
   try{
-    var el=document.getElementById('opts');el.style.display='grid';el.className='cards';el.innerHTML='';
+    var el=document.getElementById('opts');el.innerHTML='';
     year=parseInt(year,10);if(!year){year=2024;}era=eraFromYear(year);G.spinEra=era;
-    var schemeLabel=G.scheme==='43'?'4-3':'3-4';
-    // #1 seed = the year's top-ranked defense (sorted by rating desc = real rank order)
     var yearPool=(IDX.defByYear[year]||[]).slice().sort(function(a,b){
       var aFit=a[5]===G.scheme?1:0, bFit=b[5]===G.scheme?1:0;
       if(bFit!==aFit)return bFit-aFit;
       return b[4]-a[4];
     }).slice(0,3);
-    el.innerHTML+='<div class="def-note"><strong>Defense rule:</strong> Pick one full defensive team unit — not individual players. The <strong>#1 seed is that year’s top-ranked defense</strong> (total + scoring defense). The board shows only that year’s top 3. Cards show team-defense stats — not W/L. Chosen scheme: <strong>'+schemeLabel+'</strong>. Range: <strong>1999–2025</strong>.</div>';
-    if(yearPool.length){
-      el.innerHTML+='<div class="def-section-title">Top 3 Defensive Units · '+year+' Regular Season</div>';
-      renderDefCards(yearPool,'Y');
-    }else{
-      el.innerHTML+='<div class="noopts">No defensive-unit data is loaded for '+year+' yet. In production this year populates from nflverse team-defense data after the regular season is complete. Use ↩ New Year.</div>';
+    if(!yearPool.length){
+      el.style.display='block';
+      el.innerHTML='<div class="noopts">No defensive-unit data for '+year+'. Use ↩ New Year.</div>';
+      return;
     }
-    function renderDefCards(list,bucket){
-      if(!list.length&&bucket==='Y'){return;}
-      for(var i=0;i<list.length;i++){
-        (function(d,idx){
-          var c=document.createElement('div');c.className='card def-unit-card';
-          var fit=d[5]===G.scheme?'Scheme fit':'Scheme convert';
-          var m=defMetricsFromData(d,idx);
-          c.innerHTML='<div class="cp">YEAR TOP 3 · '+esc(d[5]==='43'?'4-3':'3-4')+'</div><div class="def-unit-rank">#'+(idx+1)+'</div><div class="cn">'+esc(canonicalUnitName(d[0]))+'</div><div class="ct">'+esc(canonicalTeam(d[1]))+' · '+d[3]+'</div><div class="ce">'+esc(eraLabel(d[2]))+' · REGULAR-SEASON DEFENSE</div>'+defStatsHtml(m)+'<div class="def-card-note">'+esc(cleanRSStat(d[6]))+'</div><span class="def-tag">'+fit+'</span><span class="def-tag">nflverse REG stats</span>';
-          c.onclick=function(){pickD(d,m);};
-          el.appendChild(c);
-        })(list[i],i);
-      }
-    }
+    mountUnitBrowser(el,yearPool,'def',function(d,idx){
+      pickD(d,defMetricsFromData(d,idx));
+    });
   }catch(e){console.warn(e);}
 }
 
@@ -564,14 +652,28 @@ function slotMeta(p){
   if(p.isD&&p.stats)return esc(defStatsLine(p.stats));
   return esc((p.t||'').split(' ').slice(-2).join(' ')+' · '+(p.y||p.e));
 }
-function posNode(sl,x,y,type,cur){
+function clipSlot(sl,x,y,type,cur){
   var p=G.roster[sl], act=sl===cur;
-  var cls='fpos '+type+(sl==='OL'?' unit':'')+(p?' filled':' empty')+(act?' act':'');
+  var cls='clip-slot '+type+(sl==='OL'?' unit-slot':'')+(sl==='DEF'?' def-slot':'')+(p?' filled':' empty')+(act?' act':'');
   var label=sl;
+  if(sl==='DEF')label=G.scheme?(G.scheme==='43'?'4-3 DEF':'3-4 DEF'):'DEF';
   return '<div class="'+cls+'" style="left:'+x+'%;top:'+y+'%" title="'+(p?esc(cleanRSStat(p.s)):'Open '+esc(sl))+'">'+
-    '<div class="fsl">'+esc(label)+'</div><div class="fnm">'+esc(fieldName(p))+'</div>'+
-    '<div class="fmeta">'+slotMeta(p)+'</div>'+(p?'<div class="frtg">'+p.r+'</div>':'')+'</div>';
+    '<div class="clip-slot-lbl">'+esc(label)+'</div>'+
+    '<div class="clip-slot-nm">'+esc(fieldName(p)||'open')+'</div></div>';
 }
+function clipboardSlotsHtml(cur){
+  var a=[];
+  a.push(clipSlot('WR1',14,38,'off',cur));
+  a.push(clipSlot('WR2',86,38,'off',cur));
+  a.push(clipSlot('WR3',28,48,'off',cur));
+  a.push(clipSlot('TE',72,52,'off',cur));
+  a.push(clipSlot('OL',50,58,'off',cur));
+  a.push(clipSlot('QB',50,68,'off',cur));
+  a.push(clipSlot('RB1',50,82,'off',cur));
+  a.push(clipSlot('DEF',50,18,'def',cur));
+  return a.join('');
+}
+
 function fieldSlotsHtml(cur){
   var a=[];
   a.push(posNode('WR1',12,69,'off',cur));
@@ -584,12 +686,20 @@ function fieldSlotsHtml(cur){
   a.push(defUnitNode(cur));
   return a.join('');
 }
+function posNode(sl,x,y,type,cur){
+  var p=G.roster[sl], act=sl===cur;
+  var cls='fpos '+type+(sl==='OL'?' unit':'')+(p?' filled':' empty')+(act?' act':'');
+  var label=sl;
+  return '<div class="'+cls+'" style="left:'+x+'%;top:'+y+'%" title="'+(p?esc(cleanRSStat(p.s)):'Open '+esc(sl))+'">'+
+    '<div class="fsl">'+esc(label)+'</div><div class="fnm">'+esc(fieldName(p))+'</div>'+
+    '<div class="fmeta">'+slotMeta(p)+'</div>'+(p?'<div class="frtg">'+p.r+'</div>':'')+'</div>';
+}
 function defUnitNode(cur){
   var p=G.roster.DEF, act=cur==='DEF';
   var cls='fpos def defunit'+(p?' filled':' empty')+(act?' act':'');
   var label=G.scheme?(G.scheme==='43'?'4-3 DEF UNIT':'3-4 DEF UNIT'):'DEF AFTER OFFENSE';
   return '<div class="'+cls+'" style="left:50%;top:30%" title="'+(p?esc(cleanRSStat(p.s)):'Choose defensive scheme after offense')+'">'+
-    '<div class="fsl">'+esc(label)+'</div><div class="fnm">'+esc(fieldName(p))+'</div>'+ 
+    '<div class="fsl">'+esc(label)+'</div><div class="fnm">'+esc(fieldName(p))+'</div>'+
     '<div class="fmeta">'+(p?esc(defStatsLine(p.stats||{totalRank:'—',scoringRank:'—',sacks:'—',ints:'—',defTd:'—',takeaways:'—'})):'Top 3 by year · #1 = best D')+'</div>'+(p?'<div class="frtg">'+p.r+'</div>':'')+'</div>';
 }
 
@@ -597,7 +707,7 @@ function renderClip(){
   var curSlot=G.idx<G.DO.length?G.DO[G.idx].sl:'';
   var t=calcTR();var gct=gc(t);
   document.getElementById('clip-ovr').textContent=t>0?'OVR '+t+' '+gct.g:'OVR —';
-  document.getElementById('field-slots').innerHTML=fieldSlotsHtml(curSlot);
+  document.getElementById('field-slots').innerHTML=clipboardSlotsHtml(curSlot);
 }
 
 function startSeason(){

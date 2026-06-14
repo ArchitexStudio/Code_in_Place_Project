@@ -22,6 +22,7 @@
   --bg:#f7f5ef;--surface:#ffffff;--ink:#111111;--muted:#4b5563;--line:#d1d5db;
   --accent:#d4af37;--accent-dark:#b58f20;--header:#111827;--header-text:#f9fafb;
   --win:#15803d;--loss:#b91c1c;--field:#1d5e2e;
+  --dark:#0c1222;--dark-panel:#131b2e;--dark-line:#1e293b;--orange:#f97316;--purple:#a855f7;
 }
 body{font-family:'Oswald',sans-serif;background:var(--bg);color:var(--ink);min-height:100vh;overflow-x:hidden;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
 .scr{display:none}
@@ -29,16 +30,16 @@ body{font-family:'Oswald',sans-serif;background:var(--bg);color:var(--ink);min-h
 
 /* Cover / intro coaching board */
 #S0.on{display:block;padding:0;background:#111;text-align:left}
-#S0 .cover-shell{height:100vh;display:grid;grid-template-columns:minmax(300px,40%) minmax(390px,60%);grid-template-areas:"field pitch";background:#171717;border:5px solid #f4f4f0;overflow:hidden}
-#S0 .cover-pitch{grid-area:pitch;background:#050505;padding:clamp(28px,4.5vw,66px) clamp(24px,4vw,54px);display:flex;flex-direction:column;justify-content:center;border-left:5px solid #f4f4f0}
+#S0 .cover-shell{height:100vh;display:grid;grid-template-columns:minmax(320px,42%) minmax(360px,58%);grid-template-areas:"pitch field";background:#171717;border:5px solid #f4f4f0;overflow:hidden}
+#S0 .cover-pitch{grid-area:pitch;background:#050505;padding:clamp(28px,4.5vw,66px) clamp(24px,4vw,54px);display:flex;flex-direction:column;justify-content:center;border-right:5px solid #f4f4f0}
 #S0 .cover-kicker{color:#d4af37;font-size:13px;letter-spacing:.24em;text-transform:uppercase;margin-bottom:14px}
 #S0 .cover-title{color:#fff;font-size:clamp(38px,6.5vw,82px);line-height:.94;letter-spacing:.03em;font-weight:700;text-transform:uppercase}
 #S0 .cover-copy{color:#d1d5db;font-family:sans-serif;font-size:14px;line-height:1.7;margin:22px 0 24px;max-width:330px}
 #S0 .cover-list{display:grid;gap:12px;margin-bottom:26px}
 #S0 .cover-list span{color:#fff;font-size:clamp(14px,2vw,22px);letter-spacing:.1em;text-transform:uppercase;border-left:4px solid #d4af37;padding-left:11px}
 #S0 #startBtn{margin-top:8px;align-self:flex-start;background:#d4af37;border-color:#d4af37;color:#050505;font-weight:700}
-#S0 .cover-field-wrap{grid-area:field;padding:clamp(18px,2.5vw,34px);background:#211d1c;display:flex;min-height:0}
-#S0 .cover-field{position:relative;flex:1;min-height:0;background:#258b35;border:5px solid #f4f4f0;overflow:hidden}
+#S0 .cover-field-wrap{grid-area:field;padding:clamp(14px,2vw,28px);background:#211d1c;display:flex;align-items:center;justify-content:center;min-height:0}
+#S0 .cover-field{position:relative;width:100%;height:100%;max-height:calc(100vh - 56px);aspect-ratio:3/4;max-width:100%;background:#258b35;border:5px solid #f4f4f0;overflow:hidden;border-radius:4px}
 #S0 .cover-field::before{content:'';position:absolute;inset:7% 0;background:repeating-linear-gradient(0deg,transparent 0 calc(10% - 3px),rgba(255,255,255,.9) calc(10% - 3px) 10%)}
 #S0 .cover-field::after{content:'';position:absolute;inset:7% 0;background:repeating-linear-gradient(90deg,transparent 0 7%,rgba(255,255,255,.82) 7% 7.5%,transparent 7.5% 10%) 0 28%/100% 12px no-repeat,repeating-linear-gradient(90deg,transparent 0 7%,rgba(255,255,255,.82) 7% 7.5%,transparent 7.5% 10%) 0 70%/100% 12px no-repeat}
 #S0 .cover-endzone{position:absolute;left:0;right:0;height:7%;display:flex;align-items:center;justify-content:center;background:#1e702d;color:#fff;letter-spacing:.35em;font-size:13px;text-transform:uppercase}
@@ -51,19 +52,73 @@ body{font-family:'Oswald',sans-serif;background:var(--bg);color:var(--ink);min-h
 #S0 .player-dot{position:absolute;z-index:4;width:42px;height:42px;border:4px solid #111;border-radius:50%;background:rgba(255,255,255,.12)}
 #S0 .dot1{left:30%;top:56%}#S0 .dot2{left:43%;top:56%}#S0 .dot3{left:56%;top:56%}#S0 .dot4{left:43%;top:64%}
 
-/* Ranked pick list (not cards) */
-.pick-list{display:block;max-width:640px;margin:0 auto;padding:0 12px 12px;max-height:min(62vh,560px);overflow-y:auto}
-.pick-list-hdr{font-family:sans-serif;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-radius:8px 8px 0 0;border-bottom:none}
-.pick-row{display:grid;grid-template-columns:36px 1fr 44px;gap:8px;align-items:center;padding:10px 12px;background:var(--surface);border:1px solid var(--line);border-top:none;cursor:pointer;transition:background .15s;font-family:sans-serif}
-.pick-row:first-of-type{border-top:1px solid var(--line)}
-.pick-row:hover{background:#f3f4f6}
-.pick-row:last-child{border-radius:0 0 8px 8px}
-.pick-rank{font-weight:700;color:var(--muted);font-size:13px}
-.pick-main{min-width:0}
-.pick-name{font-weight:700;font-size:14px;color:var(--ink);line-height:1.2}
-.pick-meta{font-size:11px;color:var(--muted);margin-top:2px;line-height:1.35}
-.pick-stats{font-size:11px;color:var(--ink);margin-top:3px;line-height:1.4}
-.pick-ovr{font-weight:700;font-size:16px;color:var(--header);text-align:right}
+/* Dark draft layout (screenshot-style) */
+#S1.on{background:var(--dark);min-height:100vh;color:#e2e8f0}
+#S1 .dhdr{background:var(--dark-panel);border-bottom:1px solid var(--dark-line);padding:12px 16px;display:flex;align-items:center;justify-content:space-between}
+#S1 .dlbl{font-size:10px;letter-spacing:.18em;color:#64748b;text-transform:uppercase;font-family:sans-serif}
+#S1 .dpos{font-size:18px;font-weight:700;color:#fff}
+#S1 .dsub{font-family:sans-serif;font-size:11px;color:#64748b;margin-top:2px}
+#S1 .dphase{color:#94a3b8;border:1px solid #334155;background:#1e293b}
+#S1 .prog{background:var(--dark-panel);border-bottom:1px solid var(--dark-line)}
+#S1 .pip{background:#334155;border-color:#475569}
+#S1 .pip.dn{background:#64748b}#S1 .pip.cr{background:var(--orange);border-color:#fb923c;box-shadow:0 0 10px rgba(249,115,22,.45)}
+.draft-body{display:grid;grid-template-columns:minmax(0,1fr) minmax(280px,42%);gap:0;min-height:calc(100vh - 96px)}
+.draft-left{padding:16px;overflow-y:auto;border-right:1px solid var(--dark-line)}
+.draft-right{padding:16px;background:var(--dark-panel);display:flex;align-items:flex-start;justify-content:center}
+.spin-panel{max-width:520px;margin:0 auto 16px}
+.spin-cards{display:flex;gap:12px;justify-content:center;margin-bottom:6px}
+.spin-card{flex:1;max-width:200px;background:#0f172a;border-radius:12px;padding:14px 12px 18px;text-align:center;min-height:96px;display:flex;flex-direction:column;justify-content:center;transition:box-shadow .2s}
+.spin-card-team{border:2px solid var(--orange);box-shadow:0 0 18px rgba(249,115,22,.25)}
+.spin-card-era{border:2px solid var(--purple);box-shadow:0 0 18px rgba(168,85,247,.25)}
+.spin-card.hide{display:none}
+.spin-card-lbl{font-size:10px;letter-spacing:.2em;text-transform:uppercase;margin-bottom:6px;font-family:sans-serif}
+.spin-card-team .spin-card-lbl{color:#fb923c}
+.spin-card-era .spin-card-lbl{color:#c084fc}
+.spin-card-val{font-size:clamp(22px,5vw,32px);font-weight:700;color:#fff;line-height:1.1;min-height:36px;word-break:break-word}
+.spin-card-val.bl{animation:ba .09s linear infinite alternate}
+.spin-card.sp{transform:scale(1.02)}
+.spin-card-team.sp{box-shadow:0 0 28px rgba(249,115,22,.45)}
+.spin-card-era.sp{box-shadow:0 0 28px rgba(168,85,247,.45)}
+.browser-info{min-width:0;overflow:hidden}
+.spin-card-foot{display:flex;justify-content:center;gap:48px;margin-bottom:14px;font-family:sans-serif;font-size:11px;color:#64748b}
+.spin-go{display:block;width:100%;max-width:280px;margin:0 auto 10px;padding:14px;border:none;border-radius:10px;background:var(--orange);color:#fff;font-family:'Oswald',sans-serif;font-size:18px;font-weight:700;letter-spacing:.14em;cursor:pointer}
+.spin-go:hover{background:#ea580c}
+.spin-go:disabled{opacity:.45;cursor:not-allowed}
+#S1 .rrrow{display:none;justify-content:center;gap:8px;margin-bottom:8px}
+#S1 .btn-sm{background:#1e293b;border-color:#334155;color:#cbd5e1}
+.clipboard{width:100%;max-width:380px}
+.clipboard-inner{position:relative;background:linear-gradient(180deg,#0f2d1a,#0a1f12);border:1px solid #1e3a2f;border-radius:16px;aspect-ratio:4/5;min-height:360px;overflow:hidden}
+.clipboard-inner::before{content:'';position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 9.5%,rgba(255,255,255,.06) 9.5% 10%);pointer-events:none}
+.clipboard-meta{display:flex;justify-content:space-between;align-items:center;margin-top:10px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#64748b;font-family:sans-serif}
+.clipboard-meta #clip-ovr{color:#fbbf24;font-weight:700}
+.clip-slot{position:absolute;transform:translate(-50%,-50%);min-width:52px;padding:8px 6px;border:2px dashed rgba(148,163,184,.45);border-radius:8px;text-align:center;background:rgba(15,23,42,.55);transition:all .2s}
+.clip-slot.filled{border-style:solid;background:rgba(30,58,95,.75);border-color:rgba(96,165,250,.6)}
+.clip-slot.act{border-color:#fbbf24;box-shadow:0 0 12px rgba(251,191,36,.35)}
+.clip-slot.def-slot{border-color:rgba(248,113,113,.5)}.clip-slot.def-slot.filled{border-color:rgba(248,113,113,.85);background:rgba(72,18,18,.75)}
+.clip-slot.unit-slot{border-color:rgba(251,191,36,.5)}.clip-slot.unit-slot.filled{border-color:rgba(251,191,36,.85);background:rgba(54,42,13,.75)}
+.clip-slot-lbl{font-size:9px;font-weight:700;color:#94a3b8;letter-spacing:.08em}
+.clip-slot-nm{font-family:sans-serif;font-size:8px;color:#e2e8f0;margin-top:2px;line-height:1.2;max-width:64px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.clip-slot.empty .clip-slot-nm{color:#64748b;font-style:italic}
+
+/* Player browser (screenshot 2) */
+.player-browser{background:#0f172a;border:1px solid var(--dark-line);border-radius:12px;overflow:hidden;font-family:sans-serif}
+.browser-toolbar{display:flex;align-items:center;gap:10px;padding:10px 12px;border-bottom:1px solid var(--dark-line);flex-wrap:wrap}
+.browser-search{flex:1;min-width:140px;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:8px 12px;color:#e2e8f0;font-size:13px}
+.browser-search::placeholder{color:#64748b}
+.browser-count{font-size:12px;color:#64748b;white-space:nowrap}
+.browser-head{display:grid;grid-template-columns:1fr repeat(3,minmax(44px,56px));gap:8px;padding:8px 14px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#64748b;border-bottom:1px solid var(--dark-line);background:#131b2e}
+.browser-head .bh-stat{text-align:right}
+.browser-list{max-height:min(50vh,480px);overflow-y:auto}
+.browser-row{display:grid;grid-template-columns:1fr repeat(3,minmax(44px,56px));gap:8px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--dark-line);cursor:pointer;transition:background .15s}
+.browser-row:hover{background:#1e293b}
+.browser-row:last-child{border-bottom:none}
+.browser-name{font-size:15px;font-weight:700;color:#f8fafc;line-height:1.2}
+.browser-pos{font-size:12px;font-weight:600;color:var(--purple);margin-top:2px}
+.browser-team{font-size:11px;color:#64748b;margin-top:1px}
+.browser-stat{text-align:right;font-size:14px;font-weight:700;color:#f1f5f9}
+.browser-stat-lbl{display:block;font-size:9px;font-weight:400;color:#64748b;margin-top:1px;text-transform:uppercase}
+.browser-empty{padding:20px;text-align:center;color:#64748b;font-size:13px}
+#S1 .noopts{background:#0f172a;border-color:#334155;color:#94a3b8;border-radius:12px;padding:16px;margin-top:8px;font-family:sans-serif}
 
 /* Buttons */
 .btn{font-family:'Oswald',sans-serif;font-size:14px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;padding:11px 28px;border:2px solid var(--header);border-radius:8px;cursor:pointer;background:var(--header);color:var(--header-text);transition:all .2s}
@@ -213,9 +268,14 @@ body{font-family:'Oswald',sans-serif;background:var(--bg);color:var(--ink);min-h
 
 @media(max-width:640px){
   #S0 .cover-shell{height:auto;min-height:100vh;overflow:visible;grid-template-columns:1fr;grid-template-areas:"pitch" "field"}
-  #S0 .cover-field-wrap{min-height:650px}
-  #S0 .cover-pitch{border-left:0;border-bottom:5px solid #f4f4f0}
-  #S0 .cover-field{min-height:720px}
+  #S0 .cover-field-wrap{min-height:420px;padding:12px}
+  #S0 .cover-pitch{border-right:0;border-bottom:5px solid #f4f4f0}
+  #S0 .cover-field{min-height:380px;max-height:none}
+  .draft-body{grid-template-columns:1fr;grid-template-rows:auto auto}
+  .draft-right{order:-1;padding:12px}
+  .clipboard-inner{min-height:300px}
+  .browser-head,.browser-row{grid-template-columns:1fr repeat(3,40px);font-size:12px}
+  .browser-name{font-size:13px}
   .field-wrap{height:390px}.fpos{min-width:59px;max-width:82px}.fpos.unit{min-width:100px}
   .fnm{font-size:8px}.fmeta{display:none}.final-field .field-wrap{height:410px}
   .def-stat-grid{grid-template-columns:repeat(2,1fr)}
@@ -228,6 +288,12 @@ body{font-family:'Oswald',sans-serif;background:var(--bg);color:var(--ink);min-h
 <!-- INTRO -->
 <div id="S0" class="scr on">
   <div class="cover-shell">
+    <section class="cover-pitch">
+      <h1 class="cover-title">Build Your<br>Perfect<br>Season</h1>
+      <p class="cover-copy">Draft a complete all-time roster by team spin, then test it across a 17-game schedule against elite historical opponents.</p>
+      <div class="cover-list"><span>Draft the roster</span><span>Choose the defense</span><span>Chase 17-0</span></div>
+      <button class="btn" id="startBtn" disabled>BUILD YOUR PERFECT SEASON</button>
+    </section>
     <section class="cover-field-wrap">
       <div class="cover-field">
         <div class="cover-endzone top">Perfect Season</div>
@@ -240,13 +306,6 @@ body{font-family:'Oswald',sans-serif;background:var(--bg);color:var(--ink);min-h
         <div class="player-dot dot3" aria-hidden="true"></div>
         <div class="player-dot dot4" aria-hidden="true"></div>
       </div>
-    </section>
-    <section class="cover-pitch">
-      <div class="cover-kicker">1999–2025 Football Simulator</div>
-      <h1 class="cover-title">Build Your<br>Perfect<br>Season</h1>
-      <p class="cover-copy">Draft a complete all-time roster by team spin, then test it across a 17-game schedule against elite historical opponents.</p>
-      <div class="cover-list"><span>Draft the roster</span><span>Choose the defense</span><span>Chase 17-0</span></div>
-      <button class="btn" id="startBtn" disabled>BUILD YOUR PERFECT SEASON</button>
     </section>
   </div>
 </div>
@@ -282,31 +341,39 @@ body{font-family:'Oswald',sans-serif;background:var(--bg);color:var(--ink);min-h
     </div>
   </div>
   <div class="prog" id="prog"></div>
-  <div class="spinsec">
-    <div class="spinlbl" id="spin-lbl">Spin a franchise · equal odds · 1999–2025 pool</div>
-    <div class="reels">
-      <div class="reel" id="rte"><div class="rl">YEAR</div><div class="rv" id="rvt">???</div></div>
-      <div class="sx">✕</div>
-      <div class="reel" id="rde"><div class="rl">TEAM</div><div class="rv" id="rvd">???</div></div>
+  <div class="draft-body">
+    <div class="draft-left">
+      <div class="spin-panel">
+        <div class="spin-cards">
+          <div class="spin-card spin-card-team" id="rde">
+            <div class="spin-card-lbl">TEAM</div>
+            <div class="spin-card-val" id="rvd">???</div>
+          </div>
+          <div class="spin-card spin-card-era hide" id="rte">
+            <div class="spin-card-lbl">YEAR</div>
+            <div class="spin-card-val" id="rvt">???</div>
+          </div>
+        </div>
+        <div class="spin-card-foot"><span>Team</span><span id="era-foot-lbl">Year</span></div>
+        <button class="spin-go" id="spbtn">SPIN</button>
+        <div class="rrrow" id="rrrow">
+          <button class="btn-sm" id="rrteam">↩ New Team</button>
+          <button class="btn-sm" id="rrera">↩ New Year</button>
+        </div>
+      </div>
+      <div id="opts" style="display:none"></div>
     </div>
-    <button class="btn bs" id="spbtn">SPIN</button>
-    <div class="rrrow" id="rrrow">
-      <button class="btn-sm" id="rrteam">↩ New Team</button>
-      <button class="btn-sm" id="rrera">↩ New Year</button>
+    <div class="draft-right">
+      <div class="clipboard">
+        <div class="clipboard-inner" id="depth-field">
+          <div id="field-slots"></div>
+        </div>
+        <div class="clipboard-meta">
+          <span id="def-sh">OFFENSE DEPTH CHART</span>
+          <span><span id="schm-lbl" style="margin-right:6px">OFFENSE</span><span id="clip-ovr">OVR —</span></span>
+        </div>
+      </div>
     </div>
-  </div>
-  <div class="cards" id="opts" style="display:none"></div>
-  <div class="field-card" id="clip">
-    <div class="clip-top">
-      <span class="clip-ttl" id="def-sh">OFFENSE FIELD DEPTH CHART</span>
-      <span><span class="clip-scheme" id="schm-lbl">OFFENSE</span><span class="clip-ovr" id="clip-ovr">OVR —</span></span>
-    </div>
-    <div class="field-note">1 QB · 1 RB · 3 WR · 1 TE · 1 OL unit. Spin a team, pick from combined career stats (1999–2025). OL/DEF: spin year, top 3 units.</div>
-    <div class="field-wrap" id="depth-field">
-      <div class="fzone def">DEFENSE</div><div class="fzone off">OFFENSE</div><div class="fhash"></div><div class="fmid">17-0</div>
-      <div id="field-slots"></div>
-    </div>
-    <div class="field-legend"><span>Blue = offense</span><span>Red = defense unit</span><span>Gold = OL unit</span><span>Glow = current pick</span></div>
   </div>
 </div>
 
